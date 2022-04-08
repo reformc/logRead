@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -32,6 +33,7 @@ type serviceReqwest struct {
 type logThread struct {
 	stop   chan struct{}
 	finish chan struct{}
+	reader io.ReadCloser
 }
 
 func newLogThread() *logThread {
@@ -42,6 +44,9 @@ func newLogThread() *logThread {
 }
 
 func (l *logThread) close() {
+	if l.reader != nil {
+		l.reader.Close()
+	}
 	close(l.stop)
 }
 
@@ -159,6 +164,7 @@ func (s *sendLog) dockerLog(containerName string, flag *logThread) {
 	if err != nil {
 		log.Fatal("error when containerLogs", err)
 	}
+	flag.reader = reader
 	r := bufio.NewReader(reader)
 	for {
 		select {
