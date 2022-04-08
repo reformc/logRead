@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<meta charset="utf-8" />
+<title>日志查看</title>
+ <style type="text/css">
+　　 a:link { text-decoration: none;color: blue}
+　　 a:active { text-decoration:blink}
+　　 a:hover { text-decoration:underline;color: red}
+　　 a:visited { text-decoration: none;color: green}
+　　 </style>
+<script language="javascript"type="text/javascript">
+	var wsUri = "ws://"+window.location.host+"/readlog/wsapi"
+    var output;
+    var websocket = new WebSocket(wsUri);
+	function load_list(){
+		var httpRequest = new XMLHttpRequest();
+        httpRequest.open('GET', '/readlog/list', true);
+        httpRequest.send();
+        httpRequest.onreadystatechange = function () {
+            if (httpRequest.readyState == 4 && httpRequest.status == 200) {
+                var json = httpRequest.responseText;
+                service_list.innerHTML=json;
+            }
+        };
+	}
+	
+	function  log_connect(data){ 
+		var type = data.type;
+		//testWebSocket();
+		var req = {};
+		req["service_type"]=data.type;
+		req["service_name"]=data.text;
+        output.innerHTML="";
+		websocket.send(JSON.stringify(req));
+	}
+
+    function init() {
+        output = document.getElementById("output");
+		load_list();
+        testWebSocket();
+    }
+    function testWebSocket() {
+		websocket.binaryType = 'arraybuffer'
+        websocket.onopen = function(evt) {
+		websocket.send("0")
+            onOpen(evt)
+        };
+        websocket.onclose = function(evt) {
+            onClose(evt)
+        };
+        websocket.onmessage = function(evt) {
+            onMessage(evt)
+        };
+        websocket.onerror = function(evt) {
+            onError(evt)
+        };
+    }
+    function onOpen(evt) {
+        writeToScreen("CONNECTED");
+		
+        //doSend("WebSocket rocks");
+    }
+    function onClose(evt) {
+        writeToScreen('<span style="color: red;">DISCONNECTED</span> ');
+    }
+    function onMessage(evt) {
+        //writeToScreen('<span style="color: blue;">'+ evt.data+'</span>');
+		writeToScreen(evt.data+"<br>");
+		console.log(console.log(evt.data))
+		//writeToScreen('<span style="color: blue;">RESPONSE: '+ binaryData(evt)+'</span>');
+		//websocket.close();
+    }
+    function onError(evt) {
+        writeToScreen('<span style="color: red;">ERROR:</span> '+ evt.data);
+    }
+    function doSend(message) {
+        writeToScreen("SENT: " + message);
+        websocket.send(message);
+    }
+    function writeToScreen(message) {		
+        //var pre = document.createElement("p");
+        //pre.style.wordWrap = "break-word";
+        var pre = document.createElement("span");
+		pre.style.color = "#C0C0C0";
+        pre.innerHTML = message;
+        output.appendChild(pre);
+		var children = output.childNodes;
+		//output1.innerHTML=children.length;
+		if(children.length>1000){
+			output.removeChild(output.firstChild);}
+		output.scrollTop = output.scrollHeight;
+    }
+	function commandsend(){
+		message_data=document.getElementById("input1").value
+		//doSend(message_data)
+		doSend('{"type":"command", "data":"'+message_data+'"}')
+	}
+	function messagesend(){
+		message_data=document.getElementById("input2").value
+		doSend(message_data+'\r\n')
+	}
+	function insert_img(){
+		var bigImg = document.createElement("img");
+		bigImg.src = "QR.png";
+		output.appendChild(bigImg)
+	}
+	function closews(){
+		websocket.close();
+	}
+    window.addEventListener("load", init, false);
+</script>
+<h2>日志查看</h2>
+<div id="output1">
+<button type="button" onclick=closews()>断开ws</button>
+<button type="button" onclick=openws() disabled=true>连接ws</button>
+<br>
+<input id='input2' type="text" size="30" name="input2" />
+<button type="button" onclick=messagesend()>信息发送</button>
+<div>服务器列表：服务器1，服务器2，服务器3</div>
+</div>
+<div id="service_list" style="height:100px;width:800px;resize:both;overflow:scroll;">
+</div>
+<div id="output" style="background:black;height:600px;width:800px;resize:both;overflow:scroll;"></div><div id="output2"></div>
+</html>
