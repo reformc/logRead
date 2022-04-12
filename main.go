@@ -20,10 +20,11 @@ import (
 )
 
 var addr = flag.String("addr", ":9198", "http service address")
+var htmlFile = flag.String("htmlPath", "/code/golang/readLog/log.html", "the html file path")
 var dockerClient *client.Client
 
 //const htmlFile = "G:/log.html"
-const htmlFile = "/code/golang/readLog/log.html"
+//const htmlFile = "/code/golang/readLog/log.html"
 
 type serviceReqwest struct {
 	ServiceType string `json:"service_type"`
@@ -294,7 +295,7 @@ func serviceList(w http.ResponseWriter, r *http.Request) {
 }
 
 func fileServe(w http.ResponseWriter, r *http.Request) {
-	content, err := ioutil.ReadFile(htmlFile)
+	content, err := ioutil.ReadFile(*htmlFile)
 	if err != nil {
 		w.Write([]byte(err.Error()))
 	} else {
