@@ -33,6 +33,27 @@
 		websocket.send(JSON.stringify(req));
 	}
 
+    function  log_docker(){ 
+		var req = {};
+		req["service_type"]="docker";
+		req["service_name"]=document.getElementById("select_docker").value;
+        if (req["service_name"] == ""){
+            return
+        }
+        output.innerHTML="";
+		websocket.send(JSON.stringify(req));
+	}
+
+    function  log_systemd(){ 
+		var req = {};
+		req["service_type"]="systemd";
+		req["service_name"]=document.getElementById("select_systemd").value;
+        if (req["service_name"] == ""){
+            return
+        }
+        output.innerHTML="";
+		websocket.send(JSON.stringify(req));
+	}
     function init() {
         output = document.getElementById("output");
 		load_list();
@@ -117,7 +138,7 @@
 <button type="button" onclick=messagesend()>信息发送</button>
 <div>服务器列表：服务器1，服务器2，服务器3</div>
 </div>
-<div id="service_list" style="height:100px;width:800px;resize:both;overflow:scroll;">
+<div id="service_list">
 </div>
 <div id="output" style="background:black;height:600px;width:800px;resize:both;overflow:scroll;"></div><div id="output2"></div>
 </html>

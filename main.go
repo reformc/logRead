@@ -76,6 +76,7 @@ func getOutput(ctx context.Context, name string, args ...string) (chan []byte, e
 	}()
 	go func() {
 		defer close(res)
+		defer stdoutPipe.Close()
 		//defer log.Println(name,"运行结束")
 		if err = cmd.Run(); err != nil {
 			return
@@ -89,13 +90,6 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
 		return true
 	},
-}
-
-func sendlog(closeCh chan struct{}, c *websocket.Conn, req serviceReqwest, mt int) {
-	switch req.ServiceType {
-	case "docker":
-
-	}
 }
 
 type sendLog struct {
@@ -239,18 +233,32 @@ func serviceList(w http.ResponseWriter, r *http.Request) {
 			down = append(down, []string{"docker", strings.ReplaceAll(container.Names[0], "/", "")})
 		}
 	}
+	/*
+		for _, upCell := range up {
+			w.Write([]byte(fmt.Sprintf(`<a herf="javascript:void(0)" onclick="log_connect(this);" type="%s"><font color=green>%s</font></a>, `, "docker", upCell[1])))
+		}
+		w.Write([]byte("<br>"))
+		for _, downCell := range down {
+			w.Write([]byte(fmt.Sprintf(`%s,`, downCell[1])))
+		}
 
+		w.Write([]byte("<br>"))
+	*/
+
+	w.Write([]byte(`
+docker:<select id="select_docker" onchange="log_docker();">
+    <option value =""> -- </option>
+	`))
 	for _, upCell := range up {
-		w.Write([]byte(fmt.Sprintf(`<a herf="javascript:void(0)" onclick="log_connect(this);" type="%s"><font color=green>%s</font></a>, `, "docker", upCell[1])))
+		w.Write([]byte(fmt.Sprintf(`<option value ="%s">%s</option>`, upCell[1], upCell[1])))
 	}
-	w.Write([]byte("<br>"))
 	for _, downCell := range down {
-		w.Write([]byte(fmt.Sprintf(`%s,`, downCell[1])))
+		w.Write([]byte(fmt.Sprintf(`<option value ="%s">*%s</option>`, downCell[1], downCell[1])))
 	}
 
-	w.Write([]byte("<br>"))
+	w.Write([]byte("\n</select><br>"))
 
-	cmd := exec.Command("sh", "-c", "systemctl list-units -all|grep reform")
+	cmd := exec.Command("sh", "-c", "systemctl list-units -all|grep hzbit")
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout // 标准输出
 	cmd.Stderr = &stderr // 标准错误
@@ -284,13 +292,27 @@ func serviceList(w http.ResponseWriter, r *http.Request) {
 				//fmt.Println(strings.Split(str, ","))
 			}
 		}
+		/*
+			for _, upCell := range up {
+				w.Write([]byte(fmt.Sprintf(`<a herf="javascript:void(0)" onclick="log_connect(this);" type="%s"><font color=green>%s</font></a>, `, upCell[0], upCell[1])))
+			}
+			w.Write([]byte("<br>"))
+			for _, downCell := range down {
+				w.Write([]byte(fmt.Sprintf(`<a herf="javascript:void(0)" onclick="log_connect(this);" type="%s"><font color=black>%s</font></a>, `, downCell[0], downCell[1])))
+			}
+		*/
+		w.Write([]byte(`
+system:<select id="select_systemd" onchange="log_systemd();">
+    <option value =""> -- </option>
+	`))
 		for _, upCell := range up {
-			w.Write([]byte(fmt.Sprintf(`<a herf="javascript:void(0)" onclick="log_connect(this);" type="%s"><font color=green>%s</font></a>, `, upCell[0], upCell[1])))
+			w.Write([]byte(fmt.Sprintf(`<option value ="%s">%s</option>`, upCell[1], upCell[1])))
 		}
-		w.Write([]byte("<br>"))
 		for _, downCell := range down {
-			w.Write([]byte(fmt.Sprintf(`<a herf="javascript:void(0)" onclick="log_connect(this);" type="%s"><font color=black>%s</font></a>, `, downCell[0], downCell[1])))
+			w.Write([]byte(fmt.Sprintf(`<option value ="%s">*%s</option>`, downCell[1], downCell[1])))
 		}
+
+		w.Write([]byte("\n</select><br>"))
 	}
 }
 
