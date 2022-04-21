@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <meta charset="utf-8" />
-<title>日志查看</title>
+<title>日志查看-测试版</title>
  <style type="text/css">
 　　 a:link { text-decoration: none;color: blue}
 　　 a:active { text-decoration:blink}
@@ -11,6 +11,13 @@
 	var wsUri = "ws://"+window.location.host+"/readlog/wsapi"
     var output;
     var websocket = new WebSocket(wsUri);
+    function scroll_message(){
+        if (document.getElementById("scroll").value=="停止滚动"){
+            document.getElementById("scroll").value="开始滚动";
+        }else{
+            document.getElementById("scroll").value="停止滚动";
+        }
+    }
 	function load_list(){
 		var httpRequest = new XMLHttpRequest();
         httpRequest.open('GET', '/readlog/list', true);
@@ -35,6 +42,7 @@
 
     function  log_docker(){ 
 		var req = {};
+        document.getElementById("select_systemd").value="";
 		req["service_type"]="docker";
 		req["service_name"]=document.getElementById("select_docker").value;
         if (req["service_name"] == ""){
@@ -46,6 +54,7 @@
 
     function  log_systemd(){ 
 		var req = {};
+        document.getElementById("select_docker").value="";
 		req["service_type"]="systemd";
 		req["service_name"]=document.getElementById("select_systemd").value;
         if (req["service_name"] == ""){
@@ -86,7 +95,7 @@
     function onMessage(evt) {
         //writeToScreen('<span style="color: blue;">'+ evt.data+'</span>');
 		writeToScreen(evt.data+"<br>");
-		console.log(console.log(evt.data))
+		//console.log(console.log(evt.data))
 		//writeToScreen('<span style="color: blue;">RESPONSE: '+ binaryData(evt)+'</span>');
 		//websocket.close();
     }
@@ -107,8 +116,12 @@
 		var children = output.childNodes;
 		//output1.innerHTML=children.length;
 		if(children.length>1000){
-			output.removeChild(output.firstChild);}
-		output.scrollTop = output.scrollHeight;
+			output.removeChild(output.firstChild);
+        }
+        if (document.getElementById("scroll").value=="停止滚动"){
+            output.scrollTop = output.scrollHeight;
+        }
+		
     }
 	function commandsend(){
 		message_data=document.getElementById("input1").value
@@ -129,14 +142,17 @@
 	}
     window.addEventListener("load", init, false);
 </script>
-<h2>日志查看</h2>
+<h2>日志查看,仅限公司网络内使用,外部无法使用</h2>
 <div id="output1">
 <button type="button" onclick=closews()>断开ws</button>
 <button type="button" onclick=openws() disabled=true>连接ws</button>
 <br>
+<!--
 <input id='input2' type="text" size="30" name="input2" />
 <button type="button" onclick=messagesend()>信息发送</button>
-<div>服务器列表：服务器1，服务器2，服务器3</div>
+-->
+<div>服务器列表：服务器1，服务器2，服务器3
+    <input id="scroll" type="button" value="停止滚动" onclick="scroll_message();"/>
 </div>
 <div id="service_list">
 </div>

@@ -57,11 +57,12 @@ func getOutput(ctx context.Context, name string, args ...string) (chan []byte, e
 	stdoutPipe, err := cmd.StdoutPipe()
 	if err != nil {
 		stdoutPipe.Close()
-		close(res)
+		//close(res)
 		return res, err
 	}
 	go func() {
-		defer stdoutPipe.Close()
+		defer close(res)
+		//defer stdoutPipe.Close()
 		scanner := bufio.NewScanner(stdoutPipe)
 		for scanner.Scan() {
 			/*
@@ -75,7 +76,7 @@ func getOutput(ctx context.Context, name string, args ...string) (chan []byte, e
 		}
 	}()
 	go func() {
-		defer close(res)
+		//defer close(res)
 		defer stdoutPipe.Close()
 		//defer log.Println(name,"运行结束")
 		if err = cmd.Run(); err != nil {
@@ -258,7 +259,7 @@ docker:<select id="select_docker" onchange="log_docker();">
 
 	w.Write([]byte("\n</select><br>"))
 
-	cmd := exec.Command("sh", "-c", "systemctl list-units -all|grep hzbit")
+	cmd := exec.Command("sh", "-c", "systemctl list-units -all|grep -E 'reform|hzbit'")
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout // 标准输出
 	cmd.Stderr = &stderr // 标准错误
@@ -311,7 +312,6 @@ system:<select id="select_systemd" onchange="log_systemd();">
 		for _, downCell := range down {
 			w.Write([]byte(fmt.Sprintf(`<option value ="%s">*%s</option>`, downCell[1], downCell[1])))
 		}
-
 		w.Write([]byte("\n</select><br>"))
 	}
 }
