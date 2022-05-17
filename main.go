@@ -12,6 +12,7 @@ import (
 	"log"
 	"net/http"
 	"os/exec"
+	"strconv"
 	"strings"
 
 	"github.com/docker/docker/api/types"
@@ -19,16 +20,28 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+const lines = 50 //查看实时日志时从多少行开始查看
+
 var addr = flag.String("addr", ":9198", "http service address")
 var htmlFile = flag.String("htmlPath", "/code/golang/readLog/log.html", "the html file path")
 var dockerClient *client.Client
 
-//const htmlFile = "G:/log.html"
-//const htmlFile = "/code/golang/readLog/log.html"
-
 type serviceReqwest struct {
+	LogType     string `json:"log_type"`
 	ServiceType string `json:"service_type"`
 	ServiceName string `json:"service_name"`
+	Since       string `json:"since"`
+	Until       string `json:"until"`
+	Grep        string `json:"grep"`
+	Lines       int    `json:"lines"`
+}
+
+type historyReqwest struct {
+	ServiceType string `json:"service_type"`
+	ServiceName string `json:"service_name"`
+	Since       string `json:"since"`
+	Until       string `json:"until"`
+	Grep        string `json:"grep"`
 }
 
 type logThread struct {
@@ -65,20 +78,11 @@ func getOutput(ctx context.Context, name string, args ...string) (chan []byte, e
 		//defer stdoutPipe.Close()
 		scanner := bufio.NewScanner(stdoutPipe)
 		for scanner.Scan() {
-			/*
-				data, err := simplifiedchinese.GB18030.NewDecoder().Bytes(scanner.Bytes())//windows系统需要转码
-				if err != nil {
-					//log.Println(scanner.Bytes())
-				}
-				res <- data
-			*/
 			res <- scanner.Bytes()
 		}
 	}()
 	go func() {
-		//defer close(res)
 		defer stdoutPipe.Close()
-		//defer log.Println(name,"运行结束")
 		if err = cmd.Run(); err != nil {
 			return
 		}
@@ -113,9 +117,21 @@ func newSendLog(c *websocket.Conn) *sendLog {
 func (s *sendLog) work(req *serviceReqwest) {
 	switch req.ServiceType {
 	case "docker":
-		go s.dockerLog(req.ServiceName, s.logCell)
+		switch req.LogType {
+		case "realtime":
+			go s.dockerLog(req.ServiceName, s.logCell)
+		case "history":
+			go s.dockerHistoryLog(req.ServiceName, req.Since, req.Until, []byte(req.Grep), req.Lines, s.logCell)
+		default:
+		}
 	case "systemd":
-		go s.systemLog(req.ServiceName, s.logCell)
+		switch req.LogType {
+		case "realtime":
+			go s.systemLog(req.ServiceName, s.logCell)
+		case "history":
+			go s.systemHistoryLog(req.ServiceName, req.Since, req.Until, []byte(req.Grep), req.Lines, s.logCell)
+		default:
+		}
 	}
 }
 
@@ -134,6 +150,7 @@ func (s *sendLog) read() {
 		req := new(serviceReqwest)
 		err = json.Unmarshal(message, req)
 		if err != nil {
+			log.Println(err)
 			continue
 		}
 		if s.logCell == nil {
@@ -155,7 +172,7 @@ func (s *sendLog) dockerLog(containerName string, flag *logThread) {
 		ShowStdout: true,
 		ShowStderr: true,
 		Follow:     true,
-		Tail:       "10",
+		Tail:       strconv.Itoa(lines),
 	})
 	if err != nil {
 		log.Fatal("error when containerLogs", err)
@@ -171,10 +188,89 @@ func (s *sendLog) dockerLog(containerName string, flag *logThread) {
 			if err != nil {
 				return
 			}
-			//fmt.Println(string(b))
 			if s.c.WriteMessage(s.mt, b[8:]) != nil {
 				return
 			}
+		}
+	}
+}
+
+func (s *sendLog) dockerHistoryLog(containerName, since, until string, grep []byte, lines int, flag *logThread) {
+	if lines > 1000 {
+		lines = 1000
+	}
+	defer close(flag.finish)
+	reader, err := dockerClient.ContainerLogs(context.TODO(), containerName, types.ContainerLogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Follow:     false,
+		Since:      since,
+		Until:      until,
+		//Tail:       strconv.Itoa(lines),
+	})
+	//fmt.Println(since, until, lines) //------------------------------------------------------------------------
+	if err != nil {
+		log.Fatal("error when containerLogs", err)
+	}
+	flag.reader = reader
+	r := bufio.NewReader(reader)
+	for {
+		select {
+		case <-flag.stop:
+			return
+		default:
+			b, err := r.ReadBytes('\n')
+			if err != nil {
+				_ = s.c.WriteMessage(s.mt, []byte("-------->message send over<--------"))
+				return
+			}
+			if bytes.Contains(b, grep) {
+				if lines > 0 {
+					lines--
+					if s.c.WriteMessage(s.mt, b[8:]) != nil {
+						return
+					}
+				} else {
+					_ = s.c.WriteMessage(s.mt, []byte("-------->message send over<--------"))
+					return
+				}
+			}
+		}
+	}
+}
+
+func (s *sendLog) systemHistoryLog(serviceName, since, until string, grep []byte, lines int, flag *logThread) {
+	if lines > 1000 {
+		lines = 1000
+	}
+	defer close(flag.finish)
+	ctx, cancle := context.WithCancel(context.Background())
+	defer cancle()
+	cmd, err := getOutput(ctx, "sh", "-c", fmt.Sprintf("journalctl -n %d --since=\"%s\" --unitl=\"%s\" -u %s|grep %s", lines, since, until, serviceName, string(grep))) //linux系统将cmd改成sh
+	//log.Println("docker", "logs", "-f", "--tail=10", req.ServiceName)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	for {
+		select {
+		case msg, ok := <-cmd:
+			if !ok {
+				_ = s.c.WriteMessage(s.mt, []byte("-------->message send over<--------"))
+				return
+			}
+			if lines > 0 {
+				lines--
+				if err = s.c.WriteMessage(s.mt, msg); err != nil {
+					log.Println(err, "终止")
+					return
+				}
+			} else {
+				_ = s.c.WriteMessage(s.mt, []byte("-------->message send over<--------"))
+				return
+			}
+		case <-flag.stop:
+			return
 		}
 	}
 }
@@ -183,7 +279,7 @@ func (s *sendLog) systemLog(serviceName string, flag *logThread) {
 	defer close(flag.finish)
 	ctx, cancle := context.WithCancel(context.Background())
 	defer cancle()
-	cmd, err := getOutput(ctx, "sh", "-c", "journalctl -f -u "+serviceName) //linux系统将cmd改成sh
+	cmd, err := getOutput(ctx, "sh", "-c", fmt.Sprintf("journalctl -f -n %d -u %s", lines, serviceName)) //linux系统将cmd改成sh
 	//log.Println("docker", "logs", "-f", "--tail=10", req.ServiceName)
 	if err != nil {
 		log.Println(err)
@@ -212,8 +308,8 @@ func wsAPI(w http.ResponseWriter, r *http.Request) {
 	logT.read()
 }
 
+//显示服务列表
 func serviceList(w http.ResponseWriter, r *http.Request) {
-	//cmd := exec.Command("cmd", "/C", "docker ps -a --format \"{{.Names}},{{.Status}}\"")
 	var err error
 
 	dockerClient, err = client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
@@ -234,17 +330,6 @@ func serviceList(w http.ResponseWriter, r *http.Request) {
 			down = append(down, []string{"docker", strings.ReplaceAll(container.Names[0], "/", "")})
 		}
 	}
-	/*
-		for _, upCell := range up {
-			w.Write([]byte(fmt.Sprintf(`<a herf="javascript:void(0)" onclick="log_connect(this);" type="%s"><font color=green>%s</font></a>, `, "docker", upCell[1])))
-		}
-		w.Write([]byte("<br>"))
-		for _, downCell := range down {
-			w.Write([]byte(fmt.Sprintf(`%s,`, downCell[1])))
-		}
-
-		w.Write([]byte("<br>"))
-	*/
 
 	w.Write([]byte(`
 docker:<select id="select_docker" onchange="log_docker();">
@@ -293,15 +378,6 @@ docker:<select id="select_docker" onchange="log_docker();">
 				//fmt.Println(strings.Split(str, ","))
 			}
 		}
-		/*
-			for _, upCell := range up {
-				w.Write([]byte(fmt.Sprintf(`<a herf="javascript:void(0)" onclick="log_connect(this);" type="%s"><font color=green>%s</font></a>, `, upCell[0], upCell[1])))
-			}
-			w.Write([]byte("<br>"))
-			for _, downCell := range down {
-				w.Write([]byte(fmt.Sprintf(`<a herf="javascript:void(0)" onclick="log_connect(this);" type="%s"><font color=black>%s</font></a>, `, downCell[0], downCell[1])))
-			}
-		*/
 		w.Write([]byte(`
 system:<select id="select_systemd" onchange="log_systemd();">
     <option value =""> -- </option>
@@ -313,6 +389,11 @@ system:<select id="select_systemd" onchange="log_systemd();">
 			w.Write([]byte(fmt.Sprintf(`<option value ="%s">*%s</option>`, downCell[1], downCell[1])))
 		}
 		w.Write([]byte("\n</select><br>"))
+		w.Write([]byte("\nsince<input id='input_since' type=\"datetime-local\" size=\"15\" name=\"input3\" />"))
+		w.Write([]byte("\nuntil<input id='input_until' type=\"datetime-local\" size=\"15\" name=\"input4\" /><br>"))
+		w.Write([]byte("\nlines<input id='input_lines' type=\"number\" size=\"15\" name=\"input5\" />"))
+		w.Write([]byte("\ngrep<input id='input_grep' type=\"text\" size=\"15\" name=\"input6\" />"))
+		w.Write([]byte("\n<button type=\"button\" onclick=history()>查询</button><br>"))
 	}
 }
 

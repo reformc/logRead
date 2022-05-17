@@ -42,9 +42,14 @@
 
     function  log_docker(){ 
 		var req = {};
+        req["log_type"]="realtime";
         document.getElementById("select_systemd").value="";
 		req["service_type"]="docker";
 		req["service_name"]=document.getElementById("select_docker").value;
+        req["since"]=document.getElementById("input_since").value.replace("T"," ");
+        req["until"]=document.getElementById("input_until").value.replace("T"," ");
+        req["grep"]=document.getElementById("input_grep").value;
+        req["lines"]=parseInt(document.getElementById("input_lines").value);
         if (req["service_name"] == ""){
             return
         }
@@ -54,15 +59,40 @@
 
     function  log_systemd(){ 
 		var req = {};
+        req["log_type"]="realtime";
         document.getElementById("select_docker").value="";
 		req["service_type"]="systemd";
 		req["service_name"]=document.getElementById("select_systemd").value;
+        req["since"]=document.getElementById("input_since").value.replace("T"," ");
+        req["until"]=document.getElementById("input_until").value.replace("T"," ");
+        req["grep"]=document.getElementById("input_grep").value;
+        req["lines"]=parseInt(document.getElementById("input_lines").value);
         if (req["service_name"] == ""){
             return
         }
         output.innerHTML="";
 		websocket.send(JSON.stringify(req));
 	}
+
+    function history(){
+        var req = {};
+        req["log_type"]="history";
+        if (document.getElementById("select_docker").value != ""){            
+		    req["service_type"]="docker";
+		    req["service_name"]=document.getElementById("select_docker").value;
+        }else if (document.getElementById("select_systemd").value != ""){
+            req["service_type"]="systemd";
+		    req["service_name"]=document.getElementById("select_systemd").value;
+        }else{
+            alert("请选择服务");
+        }
+        req["since"]=document.getElementById("input_since").value;
+        req["until"]=document.getElementById("input_until").value;
+        req["grep"]=document.getElementById("input_grep").value;
+        req["lines"]=parseInt(document.getElementById("input_lines").value);
+        output.innerHTML="";
+		websocket.send(JSON.stringify(req));
+    }
     function init() {
         output = document.getElementById("output");
 		load_list();
@@ -156,5 +186,5 @@
 </div>
 <div id="service_list">
 </div>
-<div id="output" style="background:black;height:600px;width:800px;resize:both;overflow:scroll;"></div><div id="output2"></div>
+<div id="output" style="background:black;height:600px;width:1024px;resize:both;overflow:scroll;"></div><div id="output2"></div>
 </html>
