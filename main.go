@@ -177,6 +177,7 @@ func (s *sendLog) dockerLog(containerName string, flag *logThread) {
 	if err != nil {
 		log.Fatal("error when containerLogs", err)
 	}
+	log.Println("follow")
 	flag.reader = reader
 	r := bufio.NewReader(reader)
 	for {
@@ -185,6 +186,10 @@ func (s *sendLog) dockerLog(containerName string, flag *logThread) {
 			return
 		default:
 			b, err := r.ReadBytes('\n')
+			if len(b) < 9 {
+				continue
+			}
+			//log.Println(string(b[8:]))
 			if err != nil {
 				return
 			}
@@ -243,11 +248,25 @@ func (s *sendLog) systemHistoryLog(serviceName, since, until string, grep []byte
 	if lines > 1000 {
 		lines = 1000
 	}
+	if lines == 0 {
+		lines = 50
+	}
 	defer close(flag.finish)
 	ctx, cancle := context.WithCancel(context.Background())
 	defer cancle()
-	cmd, err := getOutput(ctx, "sh", "-c", fmt.Sprintf("journalctl -n %d --since=\"%s\" --unitl=\"%s\" -u %s|grep %s", lines, since, until, serviceName, string(grep))) //linux系统将cmd改成sh
-	//log.Println("docker", "logs", "-f", "--tail=10", req.ServiceName)
+	command := fmt.Sprintf("journalctl")
+	if since != "" {
+		command = command + " --since=\"" + strings.ReplaceAll(since, "T", " ") + "\""
+	}
+	if until != "" {
+		command = command + " --until=\"" + strings.ReplaceAll(until, "T", " ") + "\""
+	}
+	command = command + " -u " + serviceName
+	if string(grep) != "" {
+		command = command + " |grep " + string(grep)
+	}
+	cmd, err := getOutput(ctx, "sh", "-c", command) //linux系统将cmd改成sh
+	log.Println(command)
 	if err != nil {
 		log.Println(err)
 		return
@@ -344,7 +363,7 @@ docker:<select id="select_docker" onchange="log_docker();">
 
 	w.Write([]byte("\n</select><br>"))
 
-	cmd := exec.Command("sh", "-c", "systemctl list-units -all|grep -E 'reform|hzbit'")
+	cmd := exec.Command("sh", "-c", "systemctl list-units -all|grep -E 'reform|hzbit|ymd'")
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout // 标准输出
 	cmd.Stderr = &stderr // 标准错误
@@ -362,7 +381,7 @@ docker:<select id="select_docker" onchange="log_docker();">
 			if str, err := stdout.ReadString([]byte("\n")[0]); err != nil {
 				break
 			} else {
-				par := split(strings.ReplaceAll(str, "●", ""))
+				par := split(strings.ReplaceAll(strings.ReplaceAll(str, "●", ""), "*", " "))
 				if len(par) != 5 {
 					w.Write([]byte("err,systemd name have ' '?"))
 					return
