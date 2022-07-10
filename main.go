@@ -14,6 +14,8 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -165,6 +167,27 @@ func (s *sendLog) read() {
 	}
 }
 
+type tmp struct {
+	sync.RWMutex
+	b bytes.Buffer
+}
+
+func (t *tmp) put(b []byte) {
+	t.Lock()
+	defer t.Unlock()
+	//t.b.Write([]byte("\n"))
+	t.b.Write(b)
+}
+
+func (t *tmp) get() []byte {
+	t.Lock()
+	defer t.Unlock()
+	res := t.b.Bytes()
+	//fmt.Print(string(res))
+	t.b.Reset()
+	return res
+}
+
 //启动一个docker日志发送线程
 func (s *sendLog) dockerLog(containerName string, flag *logThread) {
 	defer close(flag.finish)
@@ -180,6 +203,23 @@ func (s *sendLog) dockerLog(containerName string, flag *logThread) {
 	log.Println("follow")
 	flag.reader = reader
 	r := bufio.NewReader(reader)
+	t := new(tmp)
+	go func() {
+		for {
+			select {
+			case <-time.After(time.Millisecond * 500):
+				tt := t.get()
+				if len(tt) > 0 {
+					if s.c.WriteMessage(s.mt, bytes.ReplaceAll(tt, []byte("\n"), []byte("<br>"))) != nil {
+						return
+					}
+				}
+			case <-flag.stop:
+				return
+			}
+		}
+	}()
+
 	for {
 		select {
 		case <-flag.stop:
@@ -193,9 +233,10 @@ func (s *sendLog) dockerLog(containerName string, flag *logThread) {
 			if err != nil {
 				return
 			}
-			if s.c.WriteMessage(s.mt, b[8:]) != nil {
-				return
-			}
+			t.put(b[8:])
+			//if s.c.WriteMessage(s.mt, b[8:]) != nil {
+			//	return
+			//}
 		}
 	}
 }
@@ -304,13 +345,31 @@ func (s *sendLog) systemLog(serviceName string, flag *logThread) {
 		log.Println(err)
 		return
 	}
+	t := new(tmp)
+	go func() {
+		for {
+			select {
+			case <-time.After(time.Millisecond * 500):
+				tt := t.get()
+				if len(tt) > 0 {
+					if s.c.WriteMessage(s.mt, bytes.ReplaceAll(tt, []byte("\n"), []byte("<br>"))) != nil {
+						return
+					}
+				}
+			case <-flag.stop:
+				return
+			}
+		}
+	}()
+
 	for {
 		select {
 		case msg := <-cmd:
-			if err = s.c.WriteMessage(s.mt, msg); err != nil {
-				log.Println(err, "终止")
-				return
-			}
+			t.put(msg)
+			//if err = s.c.WriteMessage(s.mt, msg); err != nil {
+			//	log.Println(err, "终止")
+			//	return
+			//}
 		case <-flag.stop:
 			return
 		}
