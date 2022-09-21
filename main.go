@@ -114,8 +114,8 @@ func newSendLog(c *websocket.Conn) *sendLog {
 	}
 }
 
-//检查是否存在日志发送线程通道，如果存在则发送停止信号并等待停止
-//然后创建新的线程通道并启动线程。
+// 检查是否存在日志发送线程通道，如果存在则发送停止信号并等待停止
+// 然后创建新的线程通道并启动线程。
 func (s *sendLog) work(req *serviceReqwest) {
 	switch req.ServiceType {
 	case "docker":
@@ -137,7 +137,7 @@ func (s *sendLog) work(req *serviceReqwest) {
 	}
 }
 
-//读取websocket信息并解析为请求结构体
+// 读取websocket信息并解析为请求结构体
 func (s *sendLog) read() {
 	defer func(aa *sendLog) {
 		if aa.logCell != nil {
@@ -188,7 +188,7 @@ func (t *tmp) get() []byte {
 	return res
 }
 
-//启动一个docker日志发送线程
+// 启动一个docker日志发送线程
 func (s *sendLog) dockerLog(containerName string, flag *logThread) {
 	defer close(flag.finish)
 	reader, err := dockerClient.ContainerLogs(context.TODO(), containerName, types.ContainerLogsOptions{
@@ -207,7 +207,7 @@ func (s *sendLog) dockerLog(containerName string, flag *logThread) {
 	go func() {
 		for {
 			select {
-			case <-time.After(time.Millisecond * 500):
+			case <-time.After(time.Millisecond * 300):
 				tt := t.get()
 				if len(tt) > 0 {
 					if s.c.WriteMessage(s.mt, bytes.ReplaceAll(tt, []byte("\n"), []byte("<br>"))) != nil {
@@ -386,7 +386,7 @@ func wsAPI(w http.ResponseWriter, r *http.Request) {
 	logT.read()
 }
 
-//显示服务列表
+// 显示服务列表
 func serviceList(w http.ResponseWriter, r *http.Request) {
 	var err error
 
