@@ -43,7 +43,9 @@ const handleSubmit = ({values, errors})=>{
 	if(!application && !system) return Notification.error('请先选择应用或者系统');
 
 	const logType = others.since || others.until ?'history':'realtime';
-	if(appChangeFlag.value === true) ws.emit('channelChange');
+	//if(appChangeFlag.value === true)
+	ws.emit('channelChange'); //广播通知 更换搜索条件了
+
 	appChangeFlag.value = false;
 	ws.send({
 		...others,
@@ -51,7 +53,6 @@ const handleSubmit = ({values, errors})=>{
 		service_type: application?'docker':'systemd',
 		service_name: application||system,
 	})
-	console.log(values);
 }
 
 </script>
