@@ -1,0 +1,103 @@
+<script setup>
+import {onMounted,watch, ref, reactive} from 'vue'
+import { Notification } from '@arco-design/web-vue'
+import ws from '../utils/ws'
+import '@arco-design/web-vue/es/scrollbar/style/index.less'
+import '@arco-design/web-vue/es/notification/style/index.less'
+
+const form = reactive({
+  application: '',
+  system: '',
+  since: '',
+  until: '',
+  lines: null,
+  grep: '',
+})
+const dockerList = ref([]);
+const systemList = ref([]);
+const appChangeFlag = ref(false);
+
+onMounted(async ()=>{
+  const resp = await window.fetch('/readlog/list');
+  const ret = await resp.text();
+	const list = ret.split(/\w+:/g);
+	const [docker, system] = list.filter((e) => e!=='' && e!== '\n');
+	dockerList.value = docker.split(/value ="([\w|-]+)"/ig).filter(e=>/^[\w|-]+$/.test(e));
+	systemList.value = system.split(/value ="([\w|-]+)"/ig).filter(e=>/^[\w|-]+$/.test(e));
+})
+
+const changeSystem = (e)=>{
+	if(e) form.application = '';
+}
+const changeApplation = (e)=>{
+	if(e) form.system = '';
+}
+
+watch([()=> form.application, ()=> form.system],(data)=>{
+	appChangeFlag.value = true;
+})
+
+const handleSubmit = ({values, errors})=>{
+	if(errors) return Notification.error(errors);
+	const {application, system, ...others} = values;
+	if(!application && !system) return Notification.error('请先选择应用或者系统');
+
+	const logType = others.since || others.until ?'history':'realtime';
+	if(appChangeFlag.value === true) ws.emit('channelChange');
+	appChangeFlag.value = false;
+	ws.send({
+		...others,
+		log_type: logType,
+		service_type: application?'docker':'systemd',
+		service_name: application||system,
+	})
+	console.log(values);
+}
+
+</script>
+
+<template>
+  <a-form class="p-5"  :model="form"  @submit="handleSubmit" layout="vertical">
+    <a-form-item field="name" label="应用列表">
+      <a-select @change="changeApplation" v-model="form.application" :trigger-props="{ autoFitPopupMinWidth: true }" placeholder="请选择应用...">
+        <a-option v-for="i in dockerList" :key="i" :value="i">{{i}}</a-option>
+      </a-select>
+    </a-form-item>
+    <a-form-item field="post" label="系统列表">
+      <a-select @change="changeSystem" v-model="form.system" placeholder="请选择系统..." >
+				<a-option v-for="i in systemList" :key="i" :value="i">{{i}}</a-option>
+      </a-select>
+    </a-form-item>
+    <a-form-item field="post" label="起始时间">
+      <a-date-picker
+          show-time
+          :time-picker-props="{ defaultValue: '09:09:06' }"
+          format="YYYY-MM-DD HH:mm:ss"
+          v-model="form.since"
+      />
+    </a-form-item>
+    <a-form-item field="post" label="结束时间">
+      <a-date-picker
+          show-time
+          :time-picker-props="{ defaultValue: '09:09:06' }"
+          format="YYYY-MM-DD HH:mm:ss"
+          v-model="form.until"
+      />
+    </a-form-item>
+    <a-form-item field="post" label="行数">
+      <a-input-number v-model="form.lines"  placeholder="请输入" :min="1" :max="10000"/>
+    </a-form-item>
+    <a-form-item field="post" label="关键词">
+      <a-input v-model="form.grep"  placeholder="请输入" />
+    </a-form-item>
+    <a-form-item>
+      <a-button html-type="submit" type="primary">搜索</a-button>
+    </a-form-item>
+  </a-form>
+</template>
+
+<style scoped>
+	.p-5{
+		padding: 10px;
+	}
+</style>
