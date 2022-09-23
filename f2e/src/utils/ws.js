@@ -2,6 +2,27 @@ import Emitter from './emitter'
 import debounce from "./debounce.js";
 import throttle from "./throttle.js";
 
+/**
+ * 字符串转uint8Array
+ * @param str
+ * @returns {Uint8Array}
+ */
+function str2Byte(str){
+    const byteArr = str.split('').map((e)=> e.charCodeAt(0));
+    return new Uint8Array(byteArr);
+}
+
+/**
+ * arrayBuff 转 string
+ * @param buf
+ * @returns {string}
+ */
+function byte2Str(buf){
+    const str = String.fromCharCode.apply(null, new Uint8Array(buf));
+    return decodeURIComponent(escape(str));
+}
+
+
 class Ws extends Emitter{
     constructor(url, protocols) {
         super();
@@ -45,8 +66,7 @@ class Ws extends Emitter{
                 this.emit('close', evt);
             }
             this._ws.onmessage = (evt)=>{
-                console.log(typeof  evt.data);
-                this.pool.push(evt.data);
+                this.pool.push(byte2Str(evt.data));
                 this.onMessage();
             }
             this._ws.onerror = (evt)=>{
@@ -66,7 +86,8 @@ class Ws extends Emitter{
         }
         try {
             data = JSON.stringify(data);
-            this._ws.send(data);
+            const bytes = str2Byte(data);
+            this._ws.send(bytes);
             this.heartBeat();
         }catch (e){
             console.log('error', e);

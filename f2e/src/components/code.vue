@@ -1,5 +1,5 @@
 <script setup>
-	import {ref, watch, defineProps, onMounted, reactive, onUnmounted} from 'vue'
+	import {ref, onMounted} from 'vue'
 	import VirtualList from 'vue3-virtual-scroll-list'
 	import ws from '../utils/ws.js'
 	import {IconDown} from '@arco-design/web-vue/es/icon'
