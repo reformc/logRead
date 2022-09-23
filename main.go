@@ -11,11 +11,11 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -25,7 +25,7 @@ import (
 const lines = 50 //查看实时日志时从多少行开始查看
 
 var addr = flag.String("addr", ":9198", "http service address")
-var htmlFile = flag.String("htmlPath", "/code/golang/readLog/log.html", "the html file path")
+var htmlPath = flag.String("htmlPath", "", "the html file path")
 var dockerClient *client.Client
 
 type serviceReqwest struct {
@@ -152,6 +152,7 @@ func (s *sendLog) read() {
 		req := new(serviceReqwest)
 		err = json.Unmarshal(message, req)
 		if err != nil {
+			log.Println(string(message))
 			log.Println(err)
 			continue
 		}
@@ -201,25 +202,9 @@ func (s *sendLog) dockerLog(containerName string, flag *logThread) {
 		log.Fatal("error when containerLogs", err)
 	}
 	log.Println("follow")
+
 	flag.reader = reader
 	r := bufio.NewReader(reader)
-	t := new(tmp)
-	go func() {
-		for {
-			select {
-			case <-time.After(time.Millisecond * 300):
-				tt := t.get()
-				if len(tt) > 0 {
-					if s.c.WriteMessage(s.mt, bytes.ReplaceAll(tt, []byte("\n"), []byte("<br>"))) != nil {
-						return
-					}
-				}
-			case <-flag.stop:
-				return
-			}
-		}
-	}()
-
 	for {
 		select {
 		case <-flag.stop:
@@ -229,29 +214,69 @@ func (s *sendLog) dockerLog(containerName string, flag *logThread) {
 			if len(b) < 9 {
 				continue
 			}
-			//log.Println(string(b[8:]))
 			if err != nil {
 				return
 			}
-			t.put(b[8:])
-			//if s.c.WriteMessage(s.mt, b[8:]) != nil {
-			//	return
-			//}
+			if s.c.WriteMessage(s.mt, b[8:]) != nil {
+				return
+			}
 		}
+
 	}
+	/*
+		t := new(tmp)
+		go func() {
+			for {
+				select {
+				case <-time.After(time.Millisecond * 300):
+					tt := t.get()
+					if len(tt) > 0 {
+						if s.c.WriteMessage(s.mt, bytes.ReplaceAll(tt, []byte("\n"), []byte("<br>"))) != nil {
+							return
+						}
+					}
+				case <-flag.stop:
+					return
+				}
+			}
+		}()
+
+		for {
+			select {
+			case <-flag.stop:
+				return
+			default:
+				b, err := r.ReadBytes('\n')
+				if len(b) < 9 {
+					continue
+				}
+				//log.Println(string(b[8:]))
+				if err != nil {
+					return
+				}
+				t.put(b[8:])
+				//if s.c.WriteMessage(s.mt, b[8:]) != nil {
+				//	return
+				//}
+			}
+		}
+	*/
 }
 
 func (s *sendLog) dockerHistoryLog(containerName, since, until string, grep []byte, lines int, flag *logThread) {
 	if lines > 1000 {
 		lines = 1000
 	}
+	if lines == 0 {
+		lines = 100
+	}
 	defer close(flag.finish)
 	reader, err := dockerClient.ContainerLogs(context.TODO(), containerName, types.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		Follow:     false,
-		Since:      since,
-		Until:      until,
+		Since:      strings.ReplaceAll(since, " ", "T"), //浏览器自定义时间框会有T
+		Until:      strings.ReplaceAll(until, " ", "T"),
 		//Tail:       strconv.Itoa(lines),
 	})
 	//fmt.Println(since, until, lines) //------------------------------------------------------------------------
@@ -290,17 +315,17 @@ func (s *sendLog) systemHistoryLog(serviceName, since, until string, grep []byte
 		lines = 1000
 	}
 	if lines == 0 {
-		lines = 50
+		lines = 100
 	}
 	defer close(flag.finish)
 	ctx, cancle := context.WithCancel(context.Background())
 	defer cancle()
 	command := fmt.Sprintf("journalctl")
 	if since != "" {
-		command = command + " --since=\"" + strings.ReplaceAll(since, "T", " ") + "\""
+		command = command + " --since=\"" + since + "\"" //若使用浏览器自带时间选择框会有T,需要将T换成空格
 	}
 	if until != "" {
-		command = command + " --until=\"" + strings.ReplaceAll(until, "T", " ") + "\""
+		command = command + " --until=\"" + until + "\""
 	}
 	command = command + " -u " + serviceName
 	if string(grep) != "" {
@@ -345,35 +370,48 @@ func (s *sendLog) systemLog(serviceName string, flag *logThread) {
 		log.Println(err)
 		return
 	}
-	t := new(tmp)
-	go func() {
-		for {
-			select {
-			case <-time.After(time.Millisecond * 500):
-				tt := t.get()
-				if len(tt) > 0 {
-					if s.c.WriteMessage(s.mt, bytes.ReplaceAll(tt, []byte("\n"), []byte("<br>"))) != nil {
-						return
-					}
-				}
-			case <-flag.stop:
-				return
-			}
-		}
-	}()
 
 	for {
 		select {
 		case msg := <-cmd:
-			t.put(msg)
-			//if err = s.c.WriteMessage(s.mt, msg); err != nil {
-			//	log.Println(err, "终止")
-			//	return
-			//}
+			if s.c.WriteMessage(s.mt, msg) != nil {
+				return
+			}
 		case <-flag.stop:
 			return
 		}
 	}
+	/*
+		t := new(tmp)
+		go func() {
+			for {
+				select {
+				case <-time.After(time.Millisecond * 300):
+					tt := t.get()
+					if len(tt) > 0 {
+						if s.c.WriteMessage(s.mt, bytes.ReplaceAll(tt, []byte("\n"), []byte("<br>"))) != nil {
+							return
+						}
+					}
+				case <-flag.stop:
+					return
+				}
+			}
+		}()
+
+		for {
+			select {
+			case msg := <-cmd:
+				t.put(msg)
+				//if err = s.c.WriteMessage(s.mt, msg); err != nil {
+				//	log.Println(err, "终止")
+				//	return
+				//}
+			case <-flag.stop:
+				return
+			}
+		}
+	*/
 }
 
 func wsAPI(w http.ResponseWriter, r *http.Request) {
@@ -476,7 +514,16 @@ system:<select id="select_systemd" onchange="log_systemd();">
 }
 
 func fileServe(w http.ResponseWriter, r *http.Request) {
-	content, err := ioutil.ReadFile(*htmlFile)
+	content, err := ioutil.ReadFile(*htmlPath + "/log.html")
+	if err != nil {
+		w.Write([]byte(err.Error()))
+	} else {
+		w.Write(content)
+	}
+}
+
+func indexServe(w http.ResponseWriter, r *http.Request) {
+	content, err := ioutil.ReadFile(*htmlPath + "/index.html")
 	if err != nil {
 		w.Write([]byte(err.Error()))
 	} else {
@@ -486,10 +533,16 @@ func fileServe(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	flag.Parse()
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	if *htmlPath == "" {
+		*htmlPath, _ = os.Getwd()
+	}
 	//test()
 	log.SetFlags(0)
 	http.HandleFunc("/readlog/list", serviceList)
-	http.HandleFunc("/readlog", fileServe)
+	http.HandleFunc("/readlog", indexServe)
+	http.HandleFunc("/index.html", indexServe)
+	http.Handle("/assets/", http.FileServer(http.Dir(*htmlPath+"/")))
 	http.HandleFunc("/readlog/wsapi", wsAPI)
 	fmt.Println(*addr)
 	log.Fatal(http.ListenAndServe(*addr, nil))

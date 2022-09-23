@@ -1,5 +1,8 @@
 node_modules/
 .idea/
 .vscode/
+logRead
+logRead.exe
+vendor
 
 yarn.lock
