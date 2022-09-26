@@ -1,5 +1,4 @@
 import {defineConfig} from 'vite'
-import path from 'path';
 import vue from '@vitejs/plugin-vue'
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite';
@@ -27,9 +26,9 @@ export default defineConfig({
         minify: true,
         rollupOptions:{
             output: {
-                entryFileNames: 'assets/[name].js',
-                chunkFileNames: 'assets/[name].js',
-                assetFileNames: `assets/[name].[ext]`,
+                entryFileNames: 'readlog/[name].js',
+                chunkFileNames: 'readlog/[name].js',
+                assetFileNames: `readlog/[name].[ext]`,
             }
         }
     },
