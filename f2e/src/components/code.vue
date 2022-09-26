@@ -29,12 +29,12 @@
 				id++;
 				line.push({ id, txt });
 			});
-			if(line.length> 5000) lines.value = line.slice(line.length-5000);
+			if(line.length> 10000) lines.value = line.slice(line.length-10000);
 			count.value += data.length;
 			scrollBottom();
 		})
 		ws.on('channelChange',()=>{
-			console.log('change');
+			id=0;
 			lines.value = [];
 		})
 	})
@@ -52,7 +52,6 @@
 	const onSelect = (e)=>{
 		codeVisible.value = true;
 		codeTxt.value = format(e.txt);
-		console.log('select',codeTxt.value);
 	}
 	const onCodeHide = ()=>{
 		codeVisible.value = false;
@@ -63,7 +62,7 @@
 <template>
 	<div class="code">
 		<div v-if="lines.length>0" class="code-title" >
-			共： {{ lines.length }} 行
+			共: {{ lines.length }} 行
 		</div>
 		<VirtualList
 				ref="target"
@@ -96,52 +95,56 @@
 		position: relative;
 		height: calc(100vh - 32px);
 		width: 100%;
-		background: rgb(var(--gray-10));
+
 
 		&-title{
 			position: absolute;
 			z-index: 100;
 			padding: 6px 10px;
-			background: rgb(var(--gray-8));
+			background: rgb(var(--gray-7));
 			color: var(--color-white);
-			box-shadow: 0 4px 10px rgb(var(--gray-10));
+			box-shadow: 0 3px 10px rgb(var(--gray-10));
 		}
 		&-line{
 			box-sizing: border-box;
-			counter-increment: line;
-			line-height: 2;
-			display: flex;
+			background: rgb(var(--gray-10));
 
-			color: var(--color-white);
-
-			&:hover{
-				cursor: pointer;
+			&:nth-child(even){
 				background: rgb(var(--gray-9));
-				&:before{
-					background: rgb(var(--gray-8));
-				}
 			}
 
-			&:before{
-				background: rgb(var(--gray-9));
-				border-right: rgb(var(--gray-8)) solid 1px;
-				//border-right: #242424 solid 4px;
-				box-sizing: border-box;
-				content: counter(line)+':';
-				display: inline-block;
-				text-align: right;
-				padding: 0 6px;
-				width: 40px;
-				color: #999
-			}
 			&-code{
-				flex:1;
-				padding: 0 12px;
-				word-break: break-all;
-				-webkit-line-clamp: 2;
-				-webkit-box-orient: vertical;
-				display: -webkit-box;
-				overflow: hidden;
+				display: flex;
+				line-height: 2;
+				color: var(--color-white);
+
+				&:hover{
+					cursor: pointer;
+					background: rgb(var(--gray-8));
+					& span{
+						background: rgb(var(--gray-7));
+					}
+				}
+
+				& span{
+					background: rgb(var(--gray-8));
+					border-right: rgb(var(--gray-7)) solid 2px;
+					box-sizing: border-box;
+					display: inline-block;
+					text-align: right;
+					padding: 0 8px;
+					width: 60px;
+					color: #999
+				}
+				&>div{
+					flex:1;
+					padding: 0 12px;
+					word-break: break-all;
+					-webkit-line-clamp: 2;
+					-webkit-box-orient: vertical;
+					display: -webkit-box;
+					overflow: hidden;
+				}
 			}
 		}
 		&-box {

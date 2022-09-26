@@ -2,6 +2,7 @@
 	<a-layout class="layout-demo">
 		<a-layout-sider hide-trigger
 										:collapsed-width="0"
+										:width="260"
 										collapsible
 										:collapsed="collapsed">
 			<opts/>

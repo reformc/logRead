@@ -19,7 +19,12 @@ function str2Byte(str){
  */
 function byte2Str(buf){
     const str = String.fromCharCode.apply(null, new Uint8Array(buf));
-    return decodeURIComponent(escape(str));
+    try {
+        str.replace(/%/g, '%25');
+        return decodeURIComponent(escape(str));
+    }catch (e){
+        return str;
+    }
 }
 
 
