@@ -15,7 +15,7 @@ const form = reactive({
 })
 const dockerList = ref([]);
 const systemList = ref([]);
-const appChangeFlag = ref(false);
+// const appChangeFlag = ref(false);
 
 onMounted(async ()=>{
   const resp = await window.fetch('/readlog/list');
@@ -28,14 +28,16 @@ onMounted(async ()=>{
 
 const changeSystem = (e)=>{
 	if(e) form.application = '';
+	handleSubmit({values:form});
 }
 const changeApplation = (e)=>{
 	if(e) form.system = '';
+	handleSubmit({values:form});
 }
 
-watch([()=> form.application, ()=> form.system],(data)=>{
-	appChangeFlag.value = true;
-})
+// watch([()=> form.application, ()=> form.system],(data)=>{
+// 	appChangeFlag.value = true;
+// })
 
 const handleSubmit = ({values, errors})=>{
 	if(errors) return Notification.error(errors);
@@ -45,8 +47,8 @@ const handleSubmit = ({values, errors})=>{
 	const logType = others.since || others.until ?'history':'realtime';
 	//if(appChangeFlag.value === true)
 	ws.emit('channelChange'); //广播通知 更换搜索条件了
+	// appChangeFlag.value = false;
 
-	appChangeFlag.value = false;
 	ws.send({
 		...others,
 		log_type: logType,
@@ -58,18 +60,18 @@ const handleSubmit = ({values, errors})=>{
 </script>
 
 <template>
-  <a-form class="p-5"  :model="form"  @submit="handleSubmit" layout="vertical">
-    <a-form-item field="name" label="应用列表">
+  <a-form class="p-5"  :model="form" @submit="handleSubmit" layout="vertical">
+    <a-form-item field="name" label="docker:">
       <a-select @change="changeApplation" v-model="form.application" :trigger-props="{ autoFitPopupMinWidth: true }" placeholder="请选择应用...">
         <a-option v-for="i in dockerList" :key="i" :value="i">{{i}}</a-option>
       </a-select>
     </a-form-item>
-    <a-form-item field="post" label="系统列表">
+    <a-form-item field="post" label="journalctl:">
       <a-select @change="changeSystem" v-model="form.system" placeholder="请选择系统..." >
 				<a-option v-for="i in systemList" :key="i" :value="i">{{i}}</a-option>
       </a-select>
     </a-form-item>
-    <a-form-item field="post" label="起始时间">
+    <a-form-item field="post" label="起始时间:">
       <a-date-picker
           show-time
           :time-picker-props="{ defaultValue: '09:09:06' }"
@@ -77,7 +79,7 @@ const handleSubmit = ({values, errors})=>{
           v-model="form.since"
       />
     </a-form-item>
-    <a-form-item field="post" label="结束时间">
+    <a-form-item field="post" label="结束时间:">
       <a-date-picker
           show-time
           :time-picker-props="{ defaultValue: '09:09:06' }"
@@ -85,10 +87,10 @@ const handleSubmit = ({values, errors})=>{
           v-model="form.until"
       />
     </a-form-item>
-    <a-form-item field="post" label="行数">
+    <a-form-item field="post" label="行数:">
       <a-input-number v-model="form.lines"  placeholder="请输入" :min="1" :max="10000"/>
     </a-form-item>
-    <a-form-item field="post" label="关键词">
+    <a-form-item field="post" label="关键词:">
       <a-input v-model="form.grep"  placeholder="请输入" />
     </a-form-item>
     <a-form-item>

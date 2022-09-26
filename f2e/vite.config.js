@@ -24,6 +24,13 @@ export default defineConfig({
         outDir: '../',
         emptyOutDir: false,
         minify: true,
+        rollupOptions:{
+            output: {
+                entryFileNames: 'readlog/[name].js',
+                chunkFileNames: 'readlog/[name].js',
+                assetFileNames: `readlog/[name].[ext]`,
+            }
+        }
     },
     server: {
         proxy: {
