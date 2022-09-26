@@ -204,8 +204,6 @@ func (s *sendLog) dockerLog(containerName string, flag *logThread) {
 	if err != nil {
 		log.Fatal("error when containerLogs", err)
 	}
-	log.Println("follow")
-
 	flag.reader = reader
 	r := bufio.NewReader(reader)
 	for {
@@ -548,9 +546,9 @@ func main() {
 	//test()
 	log.SetFlags(0)
 	http.HandleFunc("/readlog/list", serviceList)
-	http.HandleFunc("/readlog", locationServer)
-	http.HandleFunc("/readlog/index.html", indexServe)
-	http.Handle("/readlog/assets/", http.StripPrefix("/readlog/", http.FileServer(http.Dir(*htmlPath+"/"))))
+	http.HandleFunc("/readlog", indexServe)
+	//http.HandleFunc("/readlog/index.html", indexServe)
+	http.Handle("/readlog/", http.FileServer(http.Dir(*htmlPath+"/")))
 	http.HandleFunc("/readlog/wsapi", wsAPI)
 	fmt.Println(*addr)
 	log.Fatal(http.ListenAndServe(*addr, nil))
