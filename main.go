@@ -150,10 +150,13 @@ func (s *sendLog) read() {
 			return
 		}
 		req := new(serviceReqwest)
+		if string(message) == "0" {
+			continue
+		}
 		err = json.Unmarshal(message, req)
 		if err != nil {
-			log.Println(string(message))
-			log.Println(err)
+			//log.Println(string(message))
+			//log.Println(err)
 			continue
 		}
 		if s.logCell == nil {
@@ -264,8 +267,8 @@ func (s *sendLog) dockerLog(containerName string, flag *logThread) {
 }
 
 func (s *sendLog) dockerHistoryLog(containerName, since, until string, grep []byte, lines int, flag *logThread) {
-	if lines > 1000 {
-		lines = 1000
+	if lines > 10000 {
+		lines = 10000
 	}
 	if lines == 0 {
 		lines = 100
@@ -311,8 +314,8 @@ func (s *sendLog) dockerHistoryLog(containerName, since, until string, grep []by
 }
 
 func (s *sendLog) systemHistoryLog(serviceName, since, until string, grep []byte, lines int, flag *logThread) {
-	if lines > 1000 {
-		lines = 1000
+	if lines > 10000 {
+		lines = 10000
 	}
 	if lines == 0 {
 		lines = 100
@@ -522,7 +525,12 @@ func fileServe(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func locationServer(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, "/readlog/index.html", 301)
+}
+
 func indexServe(w http.ResponseWriter, r *http.Request) {
+	log.Println(*htmlPath + "/index.html")
 	content, err := ioutil.ReadFile(*htmlPath + "/index.html")
 	if err != nil {
 		w.Write([]byte(err.Error()))
@@ -540,9 +548,9 @@ func main() {
 	//test()
 	log.SetFlags(0)
 	http.HandleFunc("/readlog/list", serviceList)
-	http.HandleFunc("/readlog", indexServe)
-	http.HandleFunc("/index.html", indexServe)
-	http.Handle("/assets/", http.FileServer(http.Dir(*htmlPath+"/")))
+	http.HandleFunc("/readlog", locationServer)
+	http.HandleFunc("/readlog/index.html", indexServe)
+	http.Handle("/readlog/assets/", http.StripPrefix("/readlog/", http.FileServer(http.Dir(*htmlPath+"/"))))
 	http.HandleFunc("/readlog/wsapi", wsAPI)
 	fmt.Println(*addr)
 	log.Fatal(http.ListenAndServe(*addr, nil))
