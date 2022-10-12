@@ -59,7 +59,9 @@ class Ws extends Emitter{
 
     open(url, protocols){
         return new Promise((resolve,reject)=>{
-            url = url || `ws://${window.location.host}/readlog/wsapi`;
+            let {protocol, host} = location;
+            protocol = /https/.test(protocol)?'wss':'ws'
+            url = url || `${protocol}://${host}/readlog/wsapi`;
             this._ws = new WebSocket(url, protocols);
             this._ws.binaryType = 'arraybuffer'
             this._ws.onopen = (evt)=>{
