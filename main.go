@@ -546,7 +546,7 @@ func main() {
 	//test()
 	log.SetFlags(0)
 	http.HandleFunc("/readlog/list", serviceList)
-	http.HandleFunc("/readlog", indexServe)
+	http.HandleFunc("/readlog/main", indexServe)
 	//http.HandleFunc("/readlog/index.html", indexServe)
 	http.Handle("/readlog/", http.FileServer(http.Dir(*htmlPath+"/")))
 	http.HandleFunc("/readlog/wsapi", wsAPI)
