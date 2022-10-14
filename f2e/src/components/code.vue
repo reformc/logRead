@@ -10,6 +10,7 @@
 	const visible = ref(false);
 	const count  = ref(0);
 	const lines = ref([]);
+	const lineNumber = ref(10000);
 	const codeVisible = ref(false);
 	const codeTxt = ref('');
 	let id = 0;
@@ -29,11 +30,12 @@
 				id++;
 				line.push({ id, txt });
 			});
-			if(line.length> 10000) lines.value = line.slice(line.length-10000);
+			if(line.length> lineNumber) lines.value = line.slice(line.length-lineNumber);
 			count.value += data.length;
 			scrollBottom();
 		})
-		ws.on('channelChange',()=>{
+		ws.on('channelChange',(data)=>{
+			if(data.lines >0) lineNumber.value = data.lines;
 			id=0;
 			lines.value = [];
 		})
