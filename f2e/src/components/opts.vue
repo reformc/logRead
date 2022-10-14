@@ -10,7 +10,7 @@ const form = reactive({
   system: '',
   since: '',
   until: '',
-  lines: null,
+  lines: 10000,
   grep: '',
 })
 const dockerList = ref([]);
@@ -19,11 +19,10 @@ const systemList = ref([]);
 
 onMounted(async ()=>{
   const resp = await window.fetch('/readlog/list');
-  const ret = await resp.text();
-	const list = ret.split(/\w+:/g);
-	const [docker, system] = list.filter((e) => e!=='' && e!== '\n');
-	dockerList.value = docker.split(/value ="([\w|-]+)"/ig).filter(e=>/^[\w|-]+$/.test(e));
-	systemList.value = system.split(/value ="([\w|-]+)"/ig).filter(e=>/^[\w|-]+$/.test(e));
+  const ret = await resp.json();
+	const [dcoker, sysem] = ret;
+	dockerList.value = dcoker.list;
+	systemList.value = sysem.list;
 })
 
 const changeSystem = (e)=>{
@@ -35,19 +34,13 @@ const changeApplation = (e)=>{
 	handleSubmit({values:form});
 }
 
-// watch([()=> form.application, ()=> form.system],(data)=>{
-// 	appChangeFlag.value = true;
-// })
-
 const handleSubmit = ({values, errors})=>{
 	if(errors) return Notification.error(errors);
 	const {application, system, ...others} = values;
 	if(!application && !system) return Notification.error('请先选择应用或者系统');
 
 	const logType = others.since || others.until ?'history':'realtime';
-	//if(appChangeFlag.value === true)
-	ws.emit('channelChange'); //广播通知 更换搜索条件了
-	// appChangeFlag.value = false;
+	ws.emit('channelChange', values); //广播通知 更换搜索条件了
 
 	ws.send({
 		...others,
@@ -63,12 +56,12 @@ const handleSubmit = ({values, errors})=>{
   <a-form class="p-5"  :model="form" @submit="handleSubmit" layout="vertical">
     <a-form-item field="name" label="docker:">
       <a-select @change="changeApplation" v-model="form.application" :trigger-props="{ autoFitPopupMinWidth: true }" placeholder="请选择应用...">
-        <a-option v-for="i in dockerList" :key="i" :value="i">{{i}}</a-option>
+        <a-option v-for="i in dockerList" :key="i.value" :value="i.value">{{i.name}}</a-option>
       </a-select>
     </a-form-item>
     <a-form-item field="post" label="journalctl:">
       <a-select @change="changeSystem" v-model="form.system" placeholder="请选择系统..." >
-				<a-option v-for="i in systemList" :key="i" :value="i">{{i}}</a-option>
+				<a-option v-for="i in systemList" :key="i.value" :value="i.value">{{i.name}}</a-option>
       </a-select>
     </a-form-item>
     <a-form-item field="post" label="起始时间:">
