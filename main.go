@@ -52,6 +52,16 @@ type logThread struct {
 	reader io.ReadCloser
 }
 
+type ServiceListObj struct {
+	ServiceType string       `json:"serviceType"`
+	List        []SeviceCell `json:"list"`
+}
+
+type SeviceCell struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
 func newLogThread() *logThread {
 	return &logThread{
 		stop:   make(chan struct{}, 1),
@@ -448,18 +458,22 @@ func serviceList(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	w.Write([]byte(`
-docker:<select id="select_docker" onchange="log_docker();">
-    <option value =""> -- </option>
-	`))
+	//	w.Write([]byte(`
+	//docker:<select id="select_docker" onchange="log_docker();">
+	//   <option value =""> -- </option>
+	//	`))
+	dockerServiceList := new(ServiceListObj)
+	dockerServiceList.ServiceType = "docker"
 	for _, upCell := range up {
-		w.Write([]byte(fmt.Sprintf(`<option value ="%s">%s</option>`, upCell[1], upCell[1])))
+		//w.Write([]byte(fmt.Sprintf(`<option value ="%s">%s</option>`, upCell[1], upCell[1])))
+		dockerServiceList.List = append(dockerServiceList.List, SeviceCell{Name: upCell[1], Value: upCell[1]})
 	}
 	for _, downCell := range down {
-		w.Write([]byte(fmt.Sprintf(`<option value ="%s">*%s</option>`, downCell[1], downCell[1])))
+		//w.Write([]byte(fmt.Sprintf(`<option value ="%s">*%s</option>`, downCell[1], downCell[1])))
+		dockerServiceList.List = append(dockerServiceList.List, SeviceCell{Name: downCell[1], Value: downCell[1]})
 	}
 
-	w.Write([]byte("\n</select><br>"))
+	//w.Write([]byte("\n</select><br>"))
 
 	cmd := exec.Command("sh", "-c", "systemctl list-units -all|grep -E 'reform|hzbit|ymd'")
 	var stdout, stderr bytes.Buffer
@@ -495,22 +509,32 @@ docker:<select id="select_docker" onchange="log_docker();">
 				//fmt.Println(strings.Split(str, ","))
 			}
 		}
-		w.Write([]byte(`
-system:<select id="select_systemd" onchange="log_systemd();">
-    <option value =""> -- </option>
-	`))
+		systemctlList := new(ServiceListObj)
+		systemctlList.ServiceType = "journalctl"
+		//		w.Write([]byte(`
+		//system:<select id="select_systemd" onchange="log_systemd();">
+		//    <option value =""> -- </option>
+		//	`))
 		for _, upCell := range up {
-			w.Write([]byte(fmt.Sprintf(`<option value ="%s">%s</option>`, upCell[1], upCell[1])))
+			//w.Write([]byte(fmt.Sprintf(`<option value ="%s">%s</option>`, upCell[1], upCell[1])))
+			systemctlList.List = append(systemctlList.List, SeviceCell{Name: upCell[1], Value: upCell[1]})
 		}
 		for _, downCell := range down {
-			w.Write([]byte(fmt.Sprintf(`<option value ="%s">*%s</option>`, downCell[1], downCell[1])))
+			//w.Write([]byte(fmt.Sprintf(`<option value ="%s">*%s</option>`, downCell[1], downCell[1])))
+			systemctlList.List = append(systemctlList.List, SeviceCell{Name: downCell[1], Value: downCell[1]})
 		}
-		w.Write([]byte("\n</select><br>"))
-		w.Write([]byte("\nsince<input id='input_since' type=\"datetime-local\" size=\"15\" name=\"input3\" />"))
-		w.Write([]byte("\nuntil<input id='input_until' type=\"datetime-local\" size=\"15\" name=\"input4\" /><br>"))
-		w.Write([]byte("\nlines<input id='input_lines' type=\"number\" size=\"15\" name=\"input5\" />"))
-		w.Write([]byte("\ngrep<input id='input_grep' type=\"text\" size=\"15\" name=\"input6\" />"))
-		w.Write([]byte("\n<button type=\"button\" onclick=history()>查询</button><br>"))
+		b, err := json.MarshalIndent([]ServiceListObj{*dockerServiceList, *systemctlList}, " ", " ")
+		if err != nil {
+			w.Write([]byte(err.Error()))
+		} else {
+			w.Write(b)
+		}
+		//w.Write([]byte("\n</select><br>"))
+		//w.Write([]byte("\nsince<input id='input_since' type=\"datetime-local\" size=\"15\" name=\"input3\" />"))
+		//w.Write([]byte("\nuntil<input id='input_until' type=\"datetime-local\" size=\"15\" name=\"input4\" /><br>"))
+		//w.Write([]byte("\nlines<input id='input_lines' type=\"number\" size=\"15\" name=\"input5\" />"))
+		//w.Write([]byte("\ngrep<input id='input_grep' type=\"text\" size=\"15\" name=\"input6\" />"))
+		//w.Write([]byte("\n<button type=\"button\" onclick=history()>查询</button><br>"))
 	}
 }
 
