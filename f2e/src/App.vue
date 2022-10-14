@@ -29,13 +29,14 @@
 	import Opts from "./components/opts.vue";
 	import Code from './components/code.vue';
 	import Header from './components/header.vue';
-
 	import {
 		IconCaretRight,
 		IconCaretLeft,
 	} from '@arco-design/web-vue/es/icon';
 	import {ref} from 'vue'
 
+
+	const maxLine = ref(10000);
 	const collapsed = ref(false);
 	const onCollapse = () => {
 		collapsed.value = !collapsed.value;
