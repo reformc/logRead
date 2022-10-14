@@ -279,7 +279,7 @@ func (s *sendLog) dockerHistoryLog(containerName, since, until string, grep []by
 		lines = 10000
 	}
 	if lines == 0 {
-		lines = 100
+		lines = 10000
 	}
 	defer close(flag.finish)
 	reader, err := dockerClient.ContainerLogs(context.TODO(), containerName, types.ContainerLogsOptions{
@@ -326,7 +326,7 @@ func (s *sendLog) systemHistoryLog(serviceName, since, until string, grep []byte
 		lines = 10000
 	}
 	if lines == 0 {
-		lines = 100
+		lines = 10000
 	}
 	defer close(flag.finish)
 	ctx, cancle := context.WithCancel(context.Background())
