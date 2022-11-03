@@ -22,7 +22,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-const lines = 50 //查看实时日志时从多少行开始查看
+const lines = 1000 //查看实时日志时从多少行开始查看
 
 var addr = flag.String("addr", ":9198", "http service address")
 var htmlPath = flag.String("htmlPath", "", "the html file path")
@@ -228,7 +228,9 @@ func (s *sendLog) dockerLog(containerName string, flag *logThread) {
 			if err != nil {
 				return
 			}
-			if s.c.WriteMessage(s.mt, b[8:]) != nil {
+			if len(b) < 9 {
+				log.Println(string(b))
+			} else if s.c.WriteMessage(s.mt, b[8:]) != nil {
 				return
 			}
 		}
@@ -309,7 +311,9 @@ func (s *sendLog) dockerHistoryLog(containerName, since, until string, grep []by
 			if bytes.Contains(b, grep) {
 				if lines > 0 {
 					lines--
-					if s.c.WriteMessage(s.mt, b[8:]) != nil {
+					if len(b) < 9 {
+						log.Println(string(b))
+					} else if s.c.WriteMessage(s.mt, b[8:]) != nil {
 						return
 					}
 				} else {
