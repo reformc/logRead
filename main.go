@@ -14,6 +14,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -204,44 +205,6 @@ func (s *sendLog) dockerLog(containerName string, flag *logThread) {
 		}
 
 	}
-	/*
-		t := new(tmp)
-		go func() {
-			for {
-				select {
-				case <-time.After(time.Millisecond * 300):
-					tt := t.get()
-					if len(tt) > 0 {
-						if s.c.WriteMessage(s.mt, bytes.ReplaceAll(tt, []byte("\n"), []byte("<br>"))) != nil {
-							return
-						}
-					}
-				case <-flag.stop:
-					return
-				}
-			}
-		}()
-
-		for {
-			select {
-			case <-flag.stop:
-				return
-			default:
-				b, err := r.ReadBytes('\n')
-				if len(b) < 9 {
-					continue
-				}
-				//log.Println(string(b[8:]))
-				if err != nil {
-					return
-				}
-				t.put(b[8:])
-				//if s.c.WriteMessage(s.mt, b[8:]) != nil {
-				//	return
-				//}
-			}
-		}
-	*/
 }
 
 func (s *sendLog) dockerHistoryLog(containerName, since, until string, grep []byte, lines int, flag *logThread) {
@@ -256,10 +219,11 @@ func (s *sendLog) dockerHistoryLog(containerName, since, until string, grep []by
 		ShowStdout: true,
 		ShowStderr: true,
 		Follow:     false,
-		Since:      strings.ReplaceAll(since, " ", "T"), //浏览器自定义时间框会有T
-		Until:      strings.ReplaceAll(until, " ", "T"),
+		Since:      timeUtc(since), //浏览器自定义时间框会有T
+		Until:      timeUtc(until),
 		//Tail:       strconv.Itoa(lines),
 	})
+	log.Println(containerName, timeUtc(since), timeUtc(until))
 	//fmt.Println(since, until, lines) //------------------------------------------------------------------------
 	if err != nil {
 		log.Fatal("error when containerLogs", err)
@@ -280,7 +244,7 @@ func (s *sendLog) dockerHistoryLog(containerName, since, until string, grep []by
 				if lines > 0 {
 					lines--
 					if len(b) < 9 {
-						log.Println(string(b))
+						//log.Println(string(b))
 					} else if s.c.WriteMessage(s.mt, b[8:]) != nil {
 						return
 					}
@@ -364,37 +328,6 @@ func (s *sendLog) systemLog(serviceName string, flag *logThread) {
 			return
 		}
 	}
-	/*
-		t := new(tmp)
-		go func() {
-			for {
-				select {
-				case <-time.After(time.Millisecond * 300):
-					tt := t.get()
-					if len(tt) > 0 {
-						if s.c.WriteMessage(s.mt, bytes.ReplaceAll(tt, []byte("\n"), []byte("<br>"))) != nil {
-							return
-						}
-					}
-				case <-flag.stop:
-					return
-				}
-			}
-		}()
-
-		for {
-			select {
-			case msg := <-cmd:
-				t.put(msg)
-				//if err = s.c.WriteMessage(s.mt, msg); err != nil {
-				//	log.Println(err, "终止")
-				//	return
-				//}
-			case <-flag.stop:
-				return
-			}
-		}
-	*/
 }
 
 func wsAPI(w http.ResponseWriter, r *http.Request) {
@@ -501,17 +434,10 @@ func serviceList(w http.ResponseWriter, r *http.Request) {
 		} else {
 			w.Write(b)
 		}
-		//w.Write([]byte("\n</select><br>"))
-		//w.Write([]byte("\nsince<input id='input_since' type=\"datetime-local\" size=\"15\" name=\"input3\" />"))
-		//w.Write([]byte("\nuntil<input id='input_until' type=\"datetime-local\" size=\"15\" name=\"input4\" /><br>"))
-		//w.Write([]byte("\nlines<input id='input_lines' type=\"number\" size=\"15\" name=\"input5\" />"))
-		//w.Write([]byte("\ngrep<input id='input_grep' type=\"text\" size=\"15\" name=\"input6\" />"))
-		//w.Write([]byte("\n<button type=\"button\" onclick=history()>查询</button><br>"))
 	}
 }
 
 func indexServe(w http.ResponseWriter, r *http.Request) {
-	log.Println(*htmlPath + "/index.html")
 	content, err := os.ReadFile(*htmlPath + "/index.html")
 	if err != nil {
 		w.Write([]byte(err.Error()))
@@ -548,4 +474,12 @@ func split(str string) []string {
 		}
 	}
 	return res
+}
+
+func timeUtc(str string) string {
+	stamp, err := time.ParseInLocation("2006-01-02 15:04:05", str, time.Local)
+	if err != nil {
+		return strings.ReplaceAll(str, " ", "T")
+	}
+	return stamp.UTC().Format("2006-01-02T15:04:05")
 }
