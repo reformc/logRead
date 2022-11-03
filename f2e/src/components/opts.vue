@@ -1,5 +1,6 @@
 <script setup>
 import {onMounted,watch, ref, reactive} from 'vue'
+import dayjs from 'dayjs';
 import { Notification } from '@arco-design/web-vue'
 import ws from '../utils/ws'
 import '@arco-design/web-vue/es/scrollbar/style/index.less'
@@ -15,7 +16,7 @@ const form = reactive({
 })
 const dockerList = ref([]);
 const systemList = ref([]);
-// const appChangeFlag = ref(false);
+
 
 onMounted(async ()=>{
   const resp = await window.fetch('/readlog/list');
@@ -24,6 +25,11 @@ onMounted(async ()=>{
 	dockerList.value = dcoker.list;
 	systemList.value = sysem.list;
 })
+
+const onChangeDate = ([start, end])=>{
+  form.since = start;
+  form.until = end;
+}
 
 const changeSystem = (e)=>{
 	if(e) form.application = '';
@@ -36,6 +42,7 @@ const changeApplation = (e)=>{
 
 const handleSubmit = ({values, errors})=>{
 	if(errors) return Notification.error(errors);
+  console.log('111111', values);
 	const {application, system, ...others} = values;
 	if(!application && !system) return Notification.error('请先选择应用或者系统');
 
@@ -64,21 +71,31 @@ const handleSubmit = ({values, errors})=>{
 				<a-option v-for="i in systemList" :key="i.value" :value="i.value">{{i.name}}</a-option>
       </a-select>
     </a-form-item>
-    <a-form-item field="post" label="起始时间:">
-      <a-date-picker
+    <a-form-item field="post" label="时间:">
+      <a-range-picker
           show-time
           :time-picker-props="{ defaultValue: '09:09:06' }"
           format="YYYY-MM-DD HH:mm:ss"
-          v-model="form.since"
-      />
-    </a-form-item>
-    <a-form-item field="post" label="结束时间:">
-      <a-date-picker
-          show-time
-          :time-picker-props="{ defaultValue: '09:09:06' }"
-          format="YYYY-MM-DD HH:mm:ss"
-          v-model="form.until"
-      />
+          @change="onChangeDate"
+          :shortcuts="[{
+            label: '最近10分钟',
+            value: ()=>[dayjs().subtract(10, 'minute'), dayjs()]
+          },{
+            label: '最近半小时',
+            value: ()=>[dayjs().subtract(30, 'minute'), dayjs()]
+          },{
+            label: '最近1小时',
+            value: ()=>[dayjs().subtract(1, 'hour'), dayjs()]
+          },{
+            label: '最近1天',
+            value: ()=>[dayjs().subtract(1, 'day'), dayjs()]
+          },
+          {
+            label: '最近1周',
+            value: ()=>[dayjs().subtract(1, 'week'), dayjs()]
+          }
+          ]"
+      ></a-range-picker>
     </a-form-item>
     <a-form-item field="post" label="行数:">
       <a-input-number v-model="form.lines"  placeholder="请输入" :min="1" :max="10000"/>
