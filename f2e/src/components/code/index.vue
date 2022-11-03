@@ -7,7 +7,6 @@
 				ref="target"
 				class="code-box"
 				wrapClass="code-wrapper"
-				itemClass="code-line"
 				:data-key="'id'"
 				:keeps="150"
 				:extra-props="{
@@ -59,9 +58,10 @@
 	onMounted(() => {
 		ws.on('message', (data) => {
 			const line = lines.value;
-			data.map((txt) => {
+			data.map((data) => {
 				id++;
-				line.push({ id, txt });
+        let txt = `${data[0]}${data.length>1?'...':''}`;
+				line.push({ id, txt, data });
 			});
 			if(line.length> lineNumber) lines.value = line.slice(line.length-lineNumber);
 			count.value += data.length;
@@ -86,7 +86,8 @@
 
 	const onSelect = (e)=>{
 		codeVisible.value = true;
-		codeTxt.value = format(e.txt);
+    const txt = e.data.join('');
+		codeTxt.value = format(txt);
 	}
 	const onCodeHide = ()=>{
 		codeVisible.value = false;
@@ -121,7 +122,8 @@
 		&-line{
 			box-sizing: border-box;
 			display: flex;
-			line-height: 2;
+			display: flex;
+			line-height: 2.5;
 			white-space: pre;
 			color: var(--color-text-1);
 

@@ -1,6 +1,8 @@
 <template>
-	<span>{{source.id}}:</span>
-	<div  @click="onHandle">{{source.txt}}</div>
+  <div class="code-line">
+    <span>{{source.id}}:</span>
+    <div  @click="onHandle">{{source.txt}}</div>
+  </div>
 </template>
 
 <script setup>

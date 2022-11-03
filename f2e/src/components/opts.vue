@@ -32,12 +32,20 @@ const onChangeDate = ([start, end])=>{
 }
 
 const changeSystem = (e)=>{
-	if(e) form.application = '';
+	if(e){
+    form.application = ''
+    form.since= ''
+    form.until= ''
+  }
 	handleSubmit({values:form});
 }
 const changeApplation = (e)=>{
-	if(e) form.system = '';
-	handleSubmit({values:form});
+	if(e){
+    form.system = ''
+    form.since= ''
+    form.until= ''
+  }
+  handleSubmit({values:form});
 }
 
 const handleSubmit = ({values, errors})=>{
