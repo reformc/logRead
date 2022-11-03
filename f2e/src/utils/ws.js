@@ -2,7 +2,7 @@ import Emitter from './emitter'
 import debounce from "./debounce.js";
 import throttle from "./throttle.js";
 
-
+const maxLogLen = 4 * 1024;
 
 /**
  * 字符串转uint8Array
@@ -37,16 +37,23 @@ function str2Byte(str){
 /**
  * arrayBuff 转 string
  * @param buf
- * @returns {string}
+ * @returns {*[]}
  */
 function byte2Str(buf){
-    const str = String.fromCharCode.apply(null, new Uint8Array(buf));
-    try {
-        str.replace(/%/g, '%25');
-        return decodeURIComponent(escape(str));
-    }catch (e){
-        return str;
+    const len = buf.byteLength;
+    let strArr = [];
+    for(let i = 0; i<= len; i+=maxLogLen){
+        const childBuf = buf.slice(i, i+maxLogLen);
+        let str = String.fromCharCode.apply(null, new Uint8Array(childBuf));
+        try {
+            str.replace(/%/g, '%25');
+            str = decodeURIComponent(escape(str));
+        }catch (e){
+
+        }
+        strArr.push(str);
     }
+    return strArr;
 }
 
 
