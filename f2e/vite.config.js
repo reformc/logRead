@@ -20,6 +20,9 @@ export default defineConfig({
             ]
         })
     ],
+    resolve: {
+        extensions:['.js','.vue']
+    },
     build: {
         outDir: '../',
         emptyOutDir: false,

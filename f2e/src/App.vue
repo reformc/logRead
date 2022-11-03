@@ -26,9 +26,9 @@
 
 <script setup>
 	import ws from './utils/ws.js';
-	import Opts from "./components/opts.vue";
-	import Code from './components/code.vue';
-	import Header from './components/header.vue';
+	import Opts from './components/opts';
+	import Code from './components/code';
+	import Header from './components/header';
 	import {
 		IconCaretRight,
 		IconCaretLeft,

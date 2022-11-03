@@ -1,4 +1,3 @@
-
 const colors = [
     '#f9664c',
     '#ed487b',
@@ -18,6 +17,13 @@ const colors = [
     '#888d92',
 ];
 
+const typeColors = {
+    debug: '#888d92',
+    info: '#fff',
+    warn: '#f9a634',
+    error: '#ed487b'
+}
+
 function getColor (str){
     str = `${str}`; //强制转string
     let num = str.split('').reduce((a,b)=>a+b.charCodeAt(0),0);
@@ -28,7 +34,6 @@ function evalJson(json){
     try{
         const obj = JSON.parse(json);
         json = JSON.stringify(obj,null,2);
-        console.log(json);
     }catch (e){
         console.err(e);
     }
@@ -36,10 +41,9 @@ function evalJson(json){
 }
 function parseSquare(code){
     const list = code.split(/(\[[\w\s-\:\$\.\/\+]+\])/g);
-    console.log(list);
+
     return list.map((chunk)=>{
         if(/^\[.*\]$/.test(chunk)){
-            console.log(chunk);
             return `<span style="color:${getColor(chunk)}">${chunk}</span>`
         }
         return chunk
