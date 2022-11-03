@@ -8,14 +8,12 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -36,14 +34,6 @@ type serviceReqwest struct {
 	Until       string `json:"until"`
 	Grep        string `json:"grep"`
 	Lines       int    `json:"lines"`
-}
-
-type historyReqwest struct {
-	ServiceType string `json:"service_type"`
-	ServiceName string `json:"service_name"`
-	Since       string `json:"since"`
-	Until       string `json:"until"`
-	Grep        string `json:"grep"`
 }
 
 type logThread struct {
@@ -113,7 +103,6 @@ type sendLog struct {
 	logCell *logThread
 	c       *websocket.Conn
 	mt      int
-	state   bool
 }
 
 func newSendLog(c *websocket.Conn) *sendLog {
@@ -179,27 +168,6 @@ func (s *sendLog) read() {
 		}
 		s.work(req)
 	}
-}
-
-type tmp struct {
-	sync.RWMutex
-	b bytes.Buffer
-}
-
-func (t *tmp) put(b []byte) {
-	t.Lock()
-	defer t.Unlock()
-	//t.b.Write([]byte("\n"))
-	t.b.Write(b)
-}
-
-func (t *tmp) get() []byte {
-	t.Lock()
-	defer t.Unlock()
-	res := t.b.Bytes()
-	//fmt.Print(string(res))
-	t.b.Reset()
-	return res
 }
 
 // 启动一个docker日志发送线程
@@ -335,7 +303,7 @@ func (s *sendLog) systemHistoryLog(serviceName, since, until string, grep []byte
 	defer close(flag.finish)
 	ctx, cancle := context.WithCancel(context.Background())
 	defer cancle()
-	command := fmt.Sprintf("journalctl")
+	command := "journalctl"
 	if since != "" {
 		command = command + " --since=\"" + since + "\"" //若使用浏览器自带时间选择框会有T,需要将T换成空格
 	}
@@ -487,7 +455,7 @@ func serviceList(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.Write([]byte(err.Error()))
 	}
-	_, errStr := string(stdout.Bytes()), string(stderr.Bytes())
+	_, errStr := stdout.String(), stderr.String()
 	if errStr != "" {
 		w.Write([]byte(errStr))
 	} else {
@@ -542,22 +510,9 @@ func serviceList(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func fileServe(w http.ResponseWriter, r *http.Request) {
-	content, err := ioutil.ReadFile(*htmlPath + "/log.html")
-	if err != nil {
-		w.Write([]byte(err.Error()))
-	} else {
-		w.Write(content)
-	}
-}
-
-func locationServer(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, "/readlog/index.html", 301)
-}
-
 func indexServe(w http.ResponseWriter, r *http.Request) {
 	log.Println(*htmlPath + "/index.html")
-	content, err := ioutil.ReadFile(*htmlPath + "/index.html")
+	content, err := os.ReadFile(*htmlPath + "/index.html")
 	if err != nil {
 		w.Write([]byte(err.Error()))
 	} else {
