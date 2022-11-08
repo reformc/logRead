@@ -479,7 +479,7 @@ func split(str string) []string {
 func timeUtc(str string) string {
 	stamp, err := time.ParseInLocation("2006-01-02 15:04:05", str, time.Local)
 	if err != nil {
-		return strings.ReplaceAll(str, " ", "T")
+		return strings.ReplaceAll(str, " ", "T") + "Z"
 	}
-	return stamp.UTC().Format("2006-01-02T15:04:05")
+	return stamp.UTC().Format("2006-01-02T15:04:05Z")
 }
