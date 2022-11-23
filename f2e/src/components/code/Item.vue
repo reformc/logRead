@@ -1,7 +1,7 @@
 <template>
   <div class="code-line">
     <span>{{source.id}}:</span>
-    <div  @click="onHandle">{{source.txt}}</div>
+    <div @click="onHandle">{{source.txt}}</div>
   </div>
 </template>
 

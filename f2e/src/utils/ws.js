@@ -64,6 +64,7 @@ class Ws extends Emitter{
         this.heartBeat = debounce(()=>{
             this.send("0");
             if(this.isOpen) this.heartBeat();
+
             console.log('send', this.isOpen);
         }, 30000, false, this);
 
@@ -102,7 +103,11 @@ class Ws extends Emitter{
                 this.emit('close', evt);
             }
             this._ws.onmessage = (evt)=>{
-                this.pool.push(byte2Str(evt.data));
+                const msg = byte2Str(evt.data);
+                this.pool.push(msg);
+                if(msg.join('').includes('->message send over<-')){
+                    this.emit('message-end',msg.join(''));
+                }
                 this.onMessage();
             }
             this._ws.onerror = (evt)=>{
@@ -114,20 +119,23 @@ class Ws extends Emitter{
     }
 
     send(data){
-        if(!this.isOpen){
-            this.on('open', ()=>{
-                this.send(data)
-            })
-            return;
-        }
-        try {
-            data = JSON.stringify(data);
-            const bytes = str2Byte(data);
-            this._ws.send(bytes);
-            this.heartBeat();
-        }catch (e){
-            console.log('error', e);
-        }
+        return new Promise((resolve, reject)=>{
+            if(!this.isOpen){
+                this.on('open', ()=>{
+                    this.send(data)
+                })
+                return;
+            }
+            try {
+                data = JSON.stringify(data);
+                const bytes = str2Byte(data);
+                this._ws.send(bytes);
+                this.heartBeat();
+            }catch (e){
+                reject(e);
+            }
+            this.on('message-end',resolve);
+        })
     }
     close(){
         return new Promise((resolve, reject)=>{
