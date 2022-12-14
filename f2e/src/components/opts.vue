@@ -1,5 +1,5 @@
 <script setup>
-import {onMounted,watch, ref, reactive} from 'vue'
+import {onMounted, ref, reactive} from 'vue'
 import dayjs from 'dayjs';
 import { Notification } from '@arco-design/web-vue'
 import ws from '../utils/ws'
@@ -16,6 +16,7 @@ const form = reactive({
 })
 const dockerList = ref([]);
 const systemList = ref([]);
+const loading = ref(false);
 
 
 onMounted(async ()=>{
@@ -37,6 +38,7 @@ const changeSystem = (e)=>{
     form.since= ''
     form.until= ''
   }
+  form.logType= 'realtime';
 	handleSubmit({values:form});
 }
 const changeApplation = (e)=>{
@@ -45,24 +47,29 @@ const changeApplation = (e)=>{
     form.since= ''
     form.until= ''
   }
+  form.logType= 'realtime';
   handleSubmit({values:form});
+}
+const setType = (type)=>{
+  type = ['history', 'realtime'].includes(type)?type: 'realtime';
+  form.logType = type;
 }
 
 const handleSubmit = ({values, errors})=>{
 	if(errors) return Notification.error(errors);
-  console.log('111111', values);
-	const {application, system, ...others} = values;
+	const {application, system, logType, ...others} = values;
 	if(!application && !system) return Notification.error('请先选择应用或者系统');
-
-	const logType = others.since || others.until ?'history':'realtime';
+	//const logType = others.since || others.until ?'history':'realtime';
 	ws.emit('channelChange', values); //广播通知 更换搜索条件了
-
+  if(logType === 'history') loading.value = true;
 	ws.send({
 		...others,
 		log_type: logType,
 		service_type: application?'docker':'systemd',
 		service_name: application||system,
-	})
+	}).finally(()=>{
+    loading.value = false;
+  })
 }
 
 </script>
@@ -85,6 +92,7 @@ const handleSubmit = ({values, errors})=>{
           :time-picker-props="{ defaultValue: '09:09:06' }"
           format="YYYY-MM-DD HH:mm:ss"
           @change="onChangeDate"
+          :default-value="[dayjs().subtract(30, 'minute'), dayjs()]"
           :shortcuts="[{
             label: '最近10分钟',
             value: ()=>[dayjs().subtract(10, 'minute'), dayjs()]
@@ -112,7 +120,10 @@ const handleSubmit = ({values, errors})=>{
       <a-input v-model="form.grep"  placeholder="请输入" />
     </a-form-item>
     <a-form-item>
-      <a-button html-type="submit" type="primary">搜索</a-button>
+      <a-space>
+        <a-button :loading="loading" @click="setType('history')" html-type="submit" >历史搜索</a-button>
+        <a-button @click="setType('realtime')" html-type="submit" type="primary">实时搜索</a-button>
+      </a-space>
     </a-form-item>
   </a-form>
 </template>
