@@ -38,6 +38,7 @@ const changeSystem = (e)=>{
     form.since= ''
     form.until= ''
   }
+  form.logType= 'realtime';
 	handleSubmit({values:form});
 }
 const changeApplation = (e)=>{
@@ -46,6 +47,7 @@ const changeApplation = (e)=>{
     form.since= ''
     form.until= ''
   }
+  form.logType= 'realtime';
   handleSubmit({values:form});
 }
 const setType = (type)=>{
