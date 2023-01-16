@@ -64,16 +64,14 @@ class Ws extends Emitter{
         this.heartBeat = debounce(()=>{
             this.send("0");
             if(this.isOpen) this.heartBeat();
-
-            console.log('send', this.isOpen);
-        }, 30000, false, this);
+        }, 30000, false);
 
         this.onMessage = throttle(()=>{
             const msg = this.pool.slice();
             this.emit('message', msg);
             this.pool= [];
             this.heartBeat();
-        }, 100, this);
+        }, 200, this);
     }
 
     /**
