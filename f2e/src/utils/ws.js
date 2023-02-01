@@ -99,7 +99,6 @@ class Ws extends Emitter{
             this._ws.onmessage = (evt)=>{
                 const msg = byte2Str(evt.data);
                 this.pool.push(msg);
-                console.log(msg, msg.includes('->message send over<-'));
                 if(msg.includes('->message send over<-')){
                     this.emit('message-end',msg);
                 }
