@@ -4,10 +4,6 @@
       共: {{ lines.length }} 行
     </div>
     <a-space class="code-opera">
-      <!--      <a-button v-if="!searchVisible" @click="showSearch" type="dashed" shape="circle">-->
-      <!--        <icon-search />-->
-      <!--      </a-button>-->
-      <!--      <a-input-search v-show="searchVisible" @search="onSearch" :style="{width:'240px'}" placeholder="请输入要搜索的关键词" />-->
       <a-button @click="exportRaw" type="primary" shape="circle">
         <icon-download/>
       </a-button>
@@ -74,10 +70,9 @@ const scrollBottom = (ev) => {
 onMounted(() => {
   ws.on('message', (data) => {
     const line = lines.value;
-    data.map((data) => {
+    data.map((txt) => {
       id++;
-      let txt = `${data[0]}${data.length > 1 ? '...' : ''}`;
-      line.push({id, txt, data});
+      line.push({id, txt});
     });
     if (line.length > lineNumber) lines.value = line.slice(line.length - lineNumber);
     count.value += data.length;
@@ -125,7 +120,7 @@ const onScroll = (evt) => {
 
 const onSelect = (e) => {
   codeVisible.value = true;
-  const txt = e.data.join('');
+  const txt = e.txt;
   codeTxt.value = format(txt);
 }
 const onCodeHide = () => {
