@@ -38,12 +38,12 @@ export default defineConfig({
     server: {
         proxy: {
             '/readlog/wsapi': {
-                target: 'ws://192.168.10.109:9198',
+                target: 'ws://access2.365ymd.cn:19179',
                 changeOrigin: true,
                 ws: true
             },
             '/readlog/list': {
-                target: 'http://192.168.10.109:9198',
+                target: 'http://access2.365ymd.cn:19179',
                 changeOrigin: true,
             }
         }

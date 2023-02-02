@@ -68,6 +68,7 @@ const handleSubmit = ({values, errors})=>{
 		service_type: application?'docker':'systemd',
 		service_name: application||system,
 	}).finally(()=>{
+    console.log('发生结束');
     loading.value = false;
   })
 }
