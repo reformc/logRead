@@ -380,7 +380,7 @@ func serviceList(w http.ResponseWriter, r *http.Request) {
 
 	//w.Write([]byte("\n</select><br>"))
 
-	cmd := exec.Command("sh", "-c", "systemctl list-units -all|grep -E 'reform|hzbit|ymd'")
+	cmd := exec.Command("sh", "-c", "systemctl list-units -all|grep -E 'reform_|hzbit_|ymd_'")
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout // 标准输出
 	cmd.Stderr = &stderr // 标准错误
