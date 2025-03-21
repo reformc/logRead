@@ -25,7 +25,6 @@ const lines = 1000 //查看实时日志时从多少行开始查看
 
 var addr = flag.String("addr", ":9198", "http service address")
 var htmlPath = flag.String("htmlPath", "", "the html file path")
-var dockerClient *client.Client
 
 type serviceReqwest struct {
 	LogType     string `json:"log_type"`
@@ -174,7 +173,12 @@ func (s *sendLog) read() {
 // 启动一个docker日志发送线程
 func (s *sendLog) dockerLog(containerName string, flag *logThread) {
 	defer close(flag.finish)
-	reader, err := dockerClient.ContainerLogs(context.TODO(), containerName, types.ContainerLogsOptions{
+	dockerC, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		log.Fatal("error when create dockerClient ", err)
+	}
+	defer dockerC.Close()
+	reader, err := dockerC.ContainerLogs(context.TODO(), containerName, types.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		Follow:     true,
@@ -215,7 +219,12 @@ func (s *sendLog) dockerHistoryLog(containerName, since, until string, grep []by
 		lines = 10000
 	}
 	defer close(flag.finish)
-	reader, err := dockerClient.ContainerLogs(context.TODO(), containerName, types.ContainerLogsOptions{
+	dockerC, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		log.Fatal("error when create dockerClient ", err)
+	}
+	defer dockerC.Close()
+	reader, err := dockerC.ContainerLogs(context.TODO(), containerName, types.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		Follow:     false,
@@ -344,12 +353,12 @@ func wsAPI(w http.ResponseWriter, r *http.Request) {
 func serviceList(w http.ResponseWriter, r *http.Request) {
 	var err error
 
-	dockerClient, err = client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	dockerC, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		log.Fatal("error when create dockerClient ", err)
 	}
-	defer dockerClient.Close()
-	containers, err := dockerClient.ContainerList(context.Background(), types.ContainerListOptions{})
+	defer dockerC.Close()
+	containers, err := dockerC.ContainerList(context.Background(), types.ContainerListOptions{})
 	if err != nil {
 		panic(err)
 	}
