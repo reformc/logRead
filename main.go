@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/gorilla/websocket"
 )
@@ -178,7 +178,7 @@ func (s *sendLog) dockerLog(containerName string, flag *logThread) {
 		log.Fatal("error when create dockerClient ", err)
 	}
 	defer dockerC.Close()
-	reader, err := dockerC.ContainerLogs(context.TODO(), containerName, types.ContainerLogsOptions{
+	reader, err := dockerC.ContainerLogs(context.TODO(), containerName, container.LogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		Follow:     true,
@@ -195,15 +195,14 @@ func (s *sendLog) dockerLog(containerName string, flag *logThread) {
 			return
 		default:
 			b, err := r.ReadBytes('\n')
-			if len(b) < 9 {
-				continue
-			}
 			if err != nil {
 				return
 			}
 			if len(b) < 9 {
 				log.Println(string(b))
-			} else if s.c.WriteMessage(s.mt, b[8:]) != nil {
+				continue
+			}
+			if s.c.WriteMessage(s.mt, b[8:]) != nil {
 				return
 			}
 		}
@@ -224,7 +223,7 @@ func (s *sendLog) dockerHistoryLog(containerName, since, until string, grep []by
 		log.Fatal("error when create dockerClient ", err)
 	}
 	defer dockerC.Close()
-	reader, err := dockerC.ContainerLogs(context.TODO(), containerName, types.ContainerLogsOptions{
+	reader, err := dockerC.ContainerLogs(context.TODO(), containerName, container.LogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		Follow:     false,
@@ -358,7 +357,7 @@ func serviceList(w http.ResponseWriter, r *http.Request) {
 		log.Fatal("error when create dockerClient ", err)
 	}
 	defer dockerC.Close()
-	containers, err := dockerC.ContainerList(context.Background(), types.ContainerListOptions{})
+	containers, err := dockerC.ContainerList(context.Background(), container.ListOptions{})
 	if err != nil {
 		panic(err)
 	}

@@ -4,5 +4,6 @@ node_modules/
 logRead
 logRead.exe
 vendor
+oldmod.mod
 
 yarn.lock
